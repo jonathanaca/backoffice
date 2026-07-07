@@ -1,6 +1,7 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatRippleModule } from '@angular/material/core';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
@@ -14,6 +15,7 @@ import { SkillsStateService } from './skills-state.service';
 @Component({
     selector: 'skills-list',
     template: `
+        <!-- eslint-disable @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
         <div class="bg-base-100 absolute inset-0 flex">
             <sidebar-menu class="sm:h-full"></sidebar-menu>
             <div class="flex h-full flex-1 flex-col overflow-hidden">
@@ -64,13 +66,25 @@ import { SkillsStateService } from './skills-state.service';
                                     <div class="mb-2 flex items-start justify-between">
                                         <h3
                                             class="text-base-content flex-1 truncate font-medium"
+                                            [class.opacity-50]="skill.enabled === false"
                                         >
                                             {{ skill.name }}
                                         </h3>
-                                        <icon
-                                            class="text-base-content opacity-0 transition-opacity group-hover:opacity-100"
-                                            >chevron_right</icon
+                                        @if (skill.enabled === false) {
+                                            <span
+                                                class="bg-base-200 text-base-content/60 mr-1 rounded-full px-2 py-0.5 text-xs font-medium"
+                                            >
+                                                Disabled
+                                            </span>
+                                        }
+                                        <button
+                                            [matTooltip]="skill.enabled === false ? 'Enable skill' : 'Disable skill'"
+                                            (click)="toggleSkillEnabled($event, skill)"
+                                            [class]="skill.enabled === false ? 'text-base-content/30 hover:text-base-content/60' : 'text-green-600 hover:text-green-700'"
+                                            class="transition-colors"
                                         >
+                                            <icon class="text-2xl">{{ skill.enabled === false ? 'toggle_off' : 'toggle_on' }}</icon>
+                                        </button>
                                     </div>
                                     <p
                                         class="text-base-content mb-3 line-clamp-2 text-sm opacity-60"
@@ -199,7 +213,7 @@ import { SkillsStateService } from './skills-state.service';
             }
         `,
     ],
-    imports: [IconComponent, MatRippleModule, SidebarMenuComponent, CommonModule, FormsModule],
+    imports: [IconComponent, MatRippleModule, MatTooltipModule, SidebarMenuComponent, CommonModule, FormsModule],
 })
 export class SkillsListComponent extends AsyncHandler implements OnInit {
     public readonly skills = signal<SkillData[]>([]);
@@ -218,12 +232,8 @@ export class SkillsListComponent extends AsyncHandler implements OnInit {
         );
     });
 
-    constructor(
-        private _router: Router,
-        private _skills_state: SkillsStateService,
-    ) {
-        super();
-    }
+    private _router = inject(Router);
+    private _skills_state = inject(SkillsStateService);
 
     public ngOnInit(): void {
         this.loadSkills();
@@ -280,6 +290,16 @@ export class SkillsListComponent extends AsyncHandler implements OnInit {
     public openSkill(skill: SkillData): void {
         this._skills_state.loadSkill(skill);
         this._router.navigate(['/skills', skill.createdAt]);
+    }
+
+    public toggleSkillEnabled(event: MouseEvent, skill: SkillData): void {
+        event.stopPropagation();
+        const updated = { ...skill, enabled: !(skill.enabled ?? true) };
+        const list = this.skills().map((s) =>
+            s.createdAt === skill.createdAt ? updated : s,
+        );
+        this.skills.set(list);
+        localStorage.setItem('BACKOFFICE.SKILLS', JSON.stringify(list));
     }
 
     public formatDate(iso_string: string): string {

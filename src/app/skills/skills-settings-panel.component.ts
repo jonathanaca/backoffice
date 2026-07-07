@@ -37,10 +37,11 @@ import { WorkflowBlock } from './skills.types';
 
                         <!-- Block Name/Category -->
                         <div class="mb-4">
-                            <label class="block text-xs font-medium text-base-content/60 mb-1">
+                            <label for="skill-setting-1" class="block text-xs font-medium text-base-content/60 mb-1">
                                 {{ 'SKILLS.BLOCK_NAME' | translate }}
                             </label>
                             <input
+                                id="skill-setting-1"
                                 type="text"
                                 [value]="block.category"
                                 disabled
@@ -50,10 +51,11 @@ import { WorkflowBlock } from './skills.types';
 
                         <!-- Comments -->
                         <div class="mb-4">
-                            <label class="block text-xs font-medium text-base-content/60 mb-1">
+                            <label for="skill-setting-2" class="block text-xs font-medium text-base-content/60 mb-1">
                                 {{ 'SKILLS.COMMENTS' | translate }}
                             </label>
                             <textarea
+                                id="skill-setting-2"
                                 [value]="block.comments || ''"
                                 (input)="updateComments($event, block.id)"
                                 rows="3"
@@ -72,10 +74,11 @@ import { WorkflowBlock } from './skills.types';
                                 <div class="space-y-4">
                                     <!-- Threshold -->
                                     <div>
-                                        <label class="block text-xs font-medium text-base-content/60 mb-1">
+                                        <label for="skill-setting-3" class="block text-xs font-medium text-base-content/60 mb-1">
                                             {{ 'SKILLS.THRESHOLD' | translate }}
                                         </label>
                                         <input
+                                id="skill-setting-3"
                                             type="number"
                                             [value]="getSettingValue(block, 'threshold', 1)"
                                             (input)="updateSetting($event, block.id, 'threshold')"
@@ -85,10 +88,11 @@ import { WorkflowBlock } from './skills.types';
 
                                     <!-- Condition -->
                                     <div>
-                                        <label class="block text-xs font-medium text-base-content/60 mb-1">
+                                        <label for="skill-setting-4" class="block text-xs font-medium text-base-content/60 mb-1">
                                             {{ 'SKILLS.CONDITION' | translate }}
                                         </label>
                                         <select
+                                id="skill-setting-4"
                                             [value]="getSettingValue(block, 'condition', 'greater_than')"
                                             (change)="updateSetting($event, block.id, 'condition')"
                                             class="w-full px-3 py-2 bg-base-200 border border-base-300 rounded text-sm text-base-content focus:border-blue-500 focus:outline-none"
@@ -101,10 +105,11 @@ import { WorkflowBlock } from './skills.types';
 
                                     <!-- Simulated Count -->
                                     <div>
-                                        <label class="block text-xs font-medium text-base-content/60 mb-1">
+                                        <label for="skill-setting-5" class="block text-xs font-medium text-base-content/60 mb-1">
                                             {{ 'SKILLS.SIMULATED_COUNT' | translate }}
                                         </label>
                                         <input
+                                id="skill-setting-5"
                                             type="number"
                                             [value]="getSettingValue(block, 'simulatedCount', 2)"
                                             (input)="updateSetting($event, block.id, 'simulatedCount')"
@@ -118,10 +123,11 @@ import { WorkflowBlock } from './skills.types';
                                 <div class="space-y-4">
                                     <!-- Action -->
                                     <div>
-                                        <label class="block text-xs font-medium text-base-content/60 mb-1">
+                                        <label for="skill-setting-6" class="block text-xs font-medium text-base-content/60 mb-1">
                                             {{ 'SKILLS.ACTION' | translate }}
                                         </label>
                                         <select
+                                id="skill-setting-6"
                                             [value]="getSettingValue(block, 'action', 'turn_on')"
                                             (change)="updateSetting($event, block.id, 'action')"
                                             class="w-full px-3 py-2 bg-base-200 border border-base-300 rounded text-sm text-base-content focus:border-blue-500 focus:outline-none"
@@ -136,10 +142,11 @@ import { WorkflowBlock } from './skills.types';
                                     <!-- Value (if action is set_value) -->
                                     @if (getSettingValue(block, 'action', 'turn_on') === 'set_value') {
                                         <div>
-                                            <label class="block text-xs font-medium text-base-content/60 mb-1">
+                                            <label for="skill-setting-7" class="block text-xs font-medium text-base-content/60 mb-1">
                                                 {{ 'SKILLS.VALUE' | translate }}
                                             </label>
                                             <input
+                                id="skill-setting-7"
                                                 type="text"
                                                 [value]="getSettingValue(block, 'value', '')"
                                                 (input)="updateSetting($event, block.id, 'value')"
@@ -153,10 +160,11 @@ import { WorkflowBlock } from './skills.types';
                                 <div class="space-y-4">
                                     <!-- Logic Type -->
                                     <div>
-                                        <label class="block text-xs font-medium text-base-content/60 mb-1">
+                                        <label for="skill-setting-8" class="block text-xs font-medium text-base-content/60 mb-1">
                                             {{ 'SKILLS.LOGIC_TYPE' | translate }}
                                         </label>
                                         <select
+                                id="skill-setting-8"
                                             [value]="getSettingValue(block, 'logicType', 'if_then')"
                                             (change)="updateSetting($event, block.id, 'logicType')"
                                             class="w-full px-3 py-2 bg-base-200 border border-base-300 rounded text-sm text-base-content focus:border-blue-500 focus:outline-none"
@@ -173,10 +181,11 @@ import { WorkflowBlock } from './skills.types';
                                 <div class="space-y-4">
                                     <!-- Agent Prompt -->
                                     <div>
-                                        <label class="block text-xs font-medium text-base-content/60 mb-1">
+                                        <label for="skill-setting-9" class="block text-xs font-medium text-base-content/60 mb-1">
                                             {{ 'SKILLS.AGENT_PROMPT' | translate }}
                                         </label>
                                         <textarea
+                                id="skill-setting-9"
                                             [value]="getSettingValue(block, 'prompt', '')"
                                             (input)="updateSetting($event, block.id, 'prompt')"
                                             rows="5"
@@ -190,10 +199,11 @@ import { WorkflowBlock } from './skills.types';
                                 <div class="space-y-4">
                                     <!-- Message Template -->
                                     <div>
-                                        <label class="block text-xs font-medium text-base-content/60 mb-1">
+                                        <label for="skill-setting-10" class="block text-xs font-medium text-base-content/60 mb-1">
                                             {{ 'SKILLS.MESSAGE_TEMPLATE' | translate }}
                                         </label>
                                         <textarea
+                                id="skill-setting-10"
                                             [value]="getSettingValue(block, 'message', '')"
                                             (input)="updateSetting($event, block.id, 'message')"
                                             rows="4"
@@ -204,10 +214,11 @@ import { WorkflowBlock } from './skills.types';
 
                                     <!-- Recipients -->
                                     <div>
-                                        <label class="block text-xs font-medium text-base-content/60 mb-1">
+                                        <label for="skill-setting-11" class="block text-xs font-medium text-base-content/60 mb-1">
                                             {{ 'SKILLS.RECIPIENTS' | translate }}
                                         </label>
                                         <input
+                                id="skill-setting-11"
                                             type="text"
                                             [value]="getSettingValue(block, 'recipients', '')"
                                             (input)="updateSetting($event, block.id, 'recipients')"

@@ -24,12 +24,18 @@ export interface PlaceOSModule {
 
 export type ExecutionMode = 'simulate' | 'production';
 
+export interface ValidationIssue {
+    level: 'error' | 'warning';
+    message: string;
+}
+
 export interface SkillData {
     name: string;
     description: string;
     blocks: WorkflowBlock[];
     connections: Connection[];
     system_id: string;
+    enabled?: boolean;
     createdAt: string;
     updatedAt?: string;
 }

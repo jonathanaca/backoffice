@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { computed, Injectable, signal } from '@angular/core';
 import { queryModules, PlaceModule } from '@placeos/ts-client';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -6,8 +6,17 @@ import {
     ExecutionMode,
     PlaceOSModule,
     SkillData,
+    ValidationIssue,
     WorkflowBlock,
 } from './skills.types';
+
+interface WorkflowSnapshot {
+    blocks: WorkflowBlock[];
+    connections: Connection[];
+}
+
+const HISTORY_LIMIT = 50;
+const HISTORY_COALESCE_MS = 1000;
 
 @Injectable({
     providedIn: 'root',
@@ -23,7 +32,20 @@ export class SkillsStateService {
     } | null>(null);
     public readonly hovered_block = signal<string | null>(null);
     public readonly scale = signal(1);
+    public readonly pan = signal({ x: 0, y: 0 });
+    public readonly skill_enabled = signal(true);
+    public readonly can_undo = signal(false);
+    public readonly can_redo = signal(false);
     public readonly execution_mode = signal<ExecutionMode>('simulate');
+
+    public readonly validation_issues = computed<ValidationIssue[]>(() =>
+        this._validate(this.blocks(), this.connections()),
+    );
+
+    private _undo_stack: WorkflowSnapshot[] = [];
+    private _redo_stack: WorkflowSnapshot[] = [];
+    private _last_history_key: string | null = null;
+    private _last_history_time = 0;
     public readonly available_modules = signal<PlaceOSModule[]>([]);
     public readonly module_functions = signal<Record<string, string[]>>({});
     public readonly module_statuses = signal<Record<string, string[]>>({});
@@ -78,7 +100,81 @@ export class SkillsStateService {
         };
     }
 
+    /* History */
+
+    private _snapshot(): WorkflowSnapshot {
+        return {
+            blocks: structuredClone(this.blocks()),
+            connections: structuredClone(this.connections()),
+        };
+    }
+
+    private _restore(snapshot: WorkflowSnapshot): void {
+        this.blocks.set(snapshot.blocks);
+        this.connections.set(snapshot.connections);
+        const selected = this.selected_block();
+        if (selected) {
+            this.selected_block.set(
+                snapshot.blocks.find((b) => b.id === selected.id) ?? null,
+            );
+        }
+    }
+
+    private _updateHistorySignals(): void {
+        this.can_undo.set(this._undo_stack.length > 0);
+        this.can_redo.set(this._redo_stack.length > 0);
+    }
+
+    /**
+     * Record the current workflow before a mutation. Rapid repeats with the
+     * same coalesce key (e.g. typing in a settings field) collapse into one
+     * undo step.
+     */
+    private _pushHistory(coalesce_key?: string): void {
+        const now = Date.now();
+        if (
+            coalesce_key &&
+            coalesce_key === this._last_history_key &&
+            now - this._last_history_time < HISTORY_COALESCE_MS
+        ) {
+            this._last_history_time = now;
+            return;
+        }
+        this._undo_stack.push(this._snapshot());
+        if (this._undo_stack.length > HISTORY_LIMIT) this._undo_stack.shift();
+        this._redo_stack = [];
+        this._last_history_key = coalesce_key ?? null;
+        this._last_history_time = now;
+        this._updateHistorySignals();
+    }
+
+    private _clearHistory(): void {
+        this._undo_stack = [];
+        this._redo_stack = [];
+        this._last_history_key = null;
+        this._updateHistorySignals();
+    }
+
+    public undo(): void {
+        const snapshot = this._undo_stack.pop();
+        if (!snapshot) return;
+        this._redo_stack.push(this._snapshot());
+        this._restore(snapshot);
+        this._last_history_key = null;
+        this._updateHistorySignals();
+    }
+
+    public redo(): void {
+        const snapshot = this._redo_stack.pop();
+        if (!snapshot) return;
+        this._undo_stack.push(this._snapshot());
+        this._restore(snapshot);
+        this._last_history_key = null;
+        this._updateHistorySignals();
+    }
+
     public addBlock(block_data: Omit<WorkflowBlock, 'id'>): void {
+        this._pushHistory();
         const snapped_position = this.snapToGrid(
             block_data.position.x,
             block_data.position.y,
@@ -92,6 +188,9 @@ export class SkillsStateService {
     }
 
     public updateBlock(id: string, updates: Partial<WorkflowBlock>): void {
+        this._pushHistory(
+            `update:${id}:${Object.keys(updates).sort().join(',')}`,
+        );
         if (updates.position) {
             updates.position = this.snapToGrid(
                 updates.position.x,
@@ -110,6 +209,7 @@ export class SkillsStateService {
     }
 
     public removeBlock(id: string): void {
+        this._pushHistory();
         this.blocks.update((blocks) => blocks.filter((b) => b.id !== id));
         this.connections.update((conns) =>
             conns.filter((c) => c.from !== id && c.to !== id),
@@ -130,6 +230,7 @@ export class SkillsStateService {
         );
         if (existing) return;
 
+        this._pushHistory();
         const existing_input = this.connections().find((c) => c.to === to);
         if (existing_input) {
             this.connections.update((conns) =>
@@ -148,6 +249,8 @@ export class SkillsStateService {
     }
 
     public removeConnection(id: string): void {
+        if (!this.connections().some((c) => c.id === id)) return;
+        this._pushHistory();
         this.connections.update((conns) => conns.filter((c) => c.id !== id));
     }
 
@@ -184,6 +287,7 @@ export class SkillsStateService {
             connections: this.connections(),
             system_id:
                 this.current_system_id() || existing?.system_id || '',
+            enabled: this.skill_enabled(),
             createdAt: existing?.createdAt || now,
             updatedAt: now,
         };
@@ -209,9 +313,34 @@ export class SkillsStateService {
         this.connections.set(skill_data.connections || []);
         this.selected_block.set(null);
         this.current_skill.set(skill_data);
+        this.skill_enabled.set(skill_data.enabled ?? true);
+        this.pan.set({ x: 0, y: 0 });
+        this.scale.set(1);
+        this._clearHistory();
         if (skill_data.system_id) {
             this.setSystemId(skill_data.system_id);
             this.loadSystemModules(skill_data.system_id);
+        }
+    }
+
+    public setSkillEnabled(enabled: boolean): void {
+        this.skill_enabled.set(enabled);
+        const current = this.current_skill();
+        if (!current) return;
+        const updated = { ...current, enabled };
+        this.current_skill.set(updated);
+        const saved_skills: SkillData[] = JSON.parse(
+            localStorage.getItem('BACKOFFICE.SKILLS') || '[]',
+        );
+        const index = saved_skills.findIndex(
+            (s) => s.createdAt === current.createdAt,
+        );
+        if (index >= 0) {
+            saved_skills[index] = updated;
+            localStorage.setItem(
+                'BACKOFFICE.SKILLS',
+                JSON.stringify(saved_skills),
+            );
         }
     }
 
@@ -225,12 +354,131 @@ export class SkillsStateService {
         return true;
     }
 
+    /** Empty the canvas as an undoable action, keeping the current skill */
+    public clearCanvas(): void {
+        if (!this.blocks().length && !this.connections().length) return;
+        this._pushHistory();
+        this.blocks.set([]);
+        this.connections.set([]);
+        this.selected_block.set(null);
+        this.cancelConnection();
+    }
+
+    /** Full reset when starting a new skill */
     public clearWorkflow(): void {
         this.blocks.set([]);
         this.connections.set([]);
         this.selected_block.set(null);
         this.current_skill.set(null);
+        this.skill_enabled.set(true);
+        this.pan.set({ x: 0, y: 0 });
+        this.scale.set(1);
+        this._clearHistory();
         this.cancelConnection();
+    }
+
+    private _validate(
+        blocks: WorkflowBlock[],
+        connections: Connection[],
+    ): ValidationIssue[] {
+        if (!blocks.length) return [];
+        const issues: ValidationIssue[] = [];
+
+        const inputs = blocks.filter((b) => b.type === 'input');
+        const outputs = blocks.filter((b) => b.type === 'output');
+        if (!inputs.length) {
+            issues.push({
+                level: 'error',
+                message: 'Add at least one input block to trigger the workflow',
+            });
+        }
+        if (!outputs.length) {
+            issues.push({
+                level: 'error',
+                message: 'Add at least one output block to perform an action',
+            });
+        }
+
+        const connected = new Set<string>();
+        for (const conn of connections) {
+            connected.add(conn.from);
+            connected.add(conn.to);
+        }
+        const dangling = blocks.filter(
+            (b) => !connected.has(b.id) && blocks.length > 1,
+        );
+        for (const block of dangling) {
+            issues.push({
+                level: 'warning',
+                message: `"${block.category}" is not connected to anything`,
+            });
+        }
+
+        if (this._hasCycle(blocks, connections)) {
+            issues.push({
+                level: 'error',
+                message: 'Workflow contains a circular connection',
+            });
+        } else if (inputs.length && outputs.length) {
+            const reachable = this._reachableFrom(
+                inputs.map((i) => i.id),
+                connections,
+            );
+            for (const output of outputs) {
+                if (connected.has(output.id) && !reachable.has(output.id)) {
+                    issues.push({
+                        level: 'warning',
+                        message: `"${output.category}" is not reachable from any input`,
+                    });
+                }
+            }
+        }
+        return issues;
+    }
+
+    private _hasCycle(
+        blocks: WorkflowBlock[],
+        connections: Connection[],
+    ): boolean {
+        const adjacency = new Map<string, string[]>();
+        for (const conn of connections) {
+            adjacency.set(conn.from, [
+                ...(adjacency.get(conn.from) || []),
+                conn.to,
+            ]);
+        }
+        const visiting = new Set<string>();
+        const visited = new Set<string>();
+        const visit = (id: string): boolean => {
+            if (visiting.has(id)) return true;
+            if (visited.has(id)) return false;
+            visiting.add(id);
+            for (const next of adjacency.get(id) || []) {
+                if (visit(next)) return true;
+            }
+            visiting.delete(id);
+            visited.add(id);
+            return false;
+        };
+        return blocks.some((b) => visit(b.id));
+    }
+
+    private _reachableFrom(
+        start_ids: string[],
+        connections: Connection[],
+    ): Set<string> {
+        const reachable = new Set<string>(start_ids);
+        const queue = [...start_ids];
+        while (queue.length) {
+            const id = queue.shift();
+            for (const conn of connections) {
+                if (conn.from === id && !reachable.has(conn.to)) {
+                    reachable.add(conn.to);
+                    queue.push(conn.to);
+                }
+            }
+        }
+        return reachable;
     }
 
     public simulateWorkflow(): void {
@@ -239,8 +487,15 @@ export class SkillsStateService {
         const inputs = blocks_array.filter((b) => b.type === 'input');
         const outputs = blocks_array.filter((b) => b.type === 'output');
 
-        if (!inputs.length || !outputs.length) {
-            alert('Add at least one input and one output block before running.');
+        const errors = this.validation_issues().filter(
+            (issue) => issue.level === 'error',
+        );
+        if (!blocks_array.length || errors.length) {
+            alert(
+                'Cannot run this workflow:\n\n' +
+                    (errors.map((e) => `• ${e.message}`).join('\n') ||
+                        '• Workflow is empty'),
+            );
             return;
         }
 

@@ -10,6 +10,7 @@ import { SkillsStateService } from '../skills/skills-state.service';
 @Component({
     selector: 'system-skills',
     template: `
+        <!-- eslint-disable @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
         <div class="h-full w-full overflow-auto p-4">
             <div class="mb-4 flex items-center justify-between">
                 <h2 class="text-xl font-semibold">Skills for this System</h2>

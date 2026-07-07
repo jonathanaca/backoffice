@@ -19,6 +19,19 @@ import { TranslatePipe } from './translate.pipe';
 import { UserAvatarComponent } from './user-avatar.component';
 import { UserMenuTooltipComponent } from './user-menu-tooltip.component';
 
+interface MenuLink {
+    name: string;
+    icon: string;
+    route?: string;
+    show_on?: () => boolean;
+    external?: () => string;
+}
+
+interface MenuSection {
+    name: string;
+    links: MenuLink[];
+}
+
 @Component({
     selector: 'sidebar-menu',
     template: `
@@ -49,7 +62,21 @@ import { UserMenuTooltipComponent } from './user-menu-tooltip.component';
                     />
                 </a>
                 <div class="w-full flex-1 space-y-2 overflow-auto pb-2">
-                    @for (link of links; track $index) {
+                    @for (section of sections; track section.name) {
+                        @if (isSectionVisible(section)) {
+                            @if (!$first) {
+                                <div
+                                    class="border-base-300 mx-3 hidden border-t"
+                                    [class.sm:block]="compact()"
+                                ></div>
+                            }
+                            <h3
+                                class="text-base-content/40 px-4 pt-3 pb-1 text-[11px] font-semibold tracking-wider uppercase select-none"
+                                [class.sm:hidden]="compact()"
+                            >
+                                {{ section.name | translate }}
+                            </h3>
+                    @for (link of section.links; track link.name) {
                         @if (!link.show_on || link.show_on()) {
                             @if (link.external) {
                                 <a
@@ -109,6 +136,8 @@ import { UserMenuTooltipComponent } from './user-menu-tooltip.component';
                                     </div>
                                 </a>
                             }
+                        }
+                    }
                         }
                     }
                     <button
@@ -205,46 +234,86 @@ export class SidebarMenuComponent extends AsyncHandler implements OnInit {
     public readonly open = model(true);
     public readonly compact = signal(false);
     public readonly user_controls = UserMenuTooltipComponent;
-    public readonly links = [
-        { name: 'COMMON.SYSTEMS', route: '/systems', icon: 'meeting_room' },
-        { name: 'COMMON.MODULES', route: '/modules', icon: 'tablet' },
-        { name: 'COMMON.ZONES', route: '/zones', icon: 'meeting_room' },
-        { name: 'COMMON.DRIVERS', route: '/drivers', icon: 'construction' },
-        // { name: 'Interfaces', route: '/interfaces', icon: 'web' }, // TODO: Fix interfaces module
-        { name: 'COMMON.REPOS', route: '/repositories', icon: 'inventory_2' },
-        { name: 'COMMON.SKILLS', route: '/skills', icon: 'auto_awesome' },
-        { name: 'COMMON.TRIGGERS', route: '/triggers', icon: 'timer' },
+    public readonly sections: MenuSection[] = [
         {
-            name: 'COMMON.ALERTS',
-            icon: 'notifications_active',
-            show_on: () => !!this.alerts_url,
-            external: () => this.alerts_url,
+            name: 'COMMON.SECTION_OPERATE',
+            links: [
+                {
+                    name: 'COMMON.SYSTEMS',
+                    route: '/systems',
+                    icon: 'meeting_room',
+                },
+                { name: 'COMMON.MODULES', route: '/modules', icon: 'tablet' },
+                { name: 'COMMON.ZONES', route: '/zones', icon: 'layers' },
+                {
+                    name: 'COMMON.DRIVERS',
+                    route: '/drivers',
+                    icon: 'construction',
+                },
+                // { name: 'Interfaces', route: '/interfaces', icon: 'web' }, // TODO: Fix interfaces module
+            ],
         },
         {
-            name: 'COMMON.METRICS',
-            icon: 'monitoring',
-            show_on: () => !!this.metrics_url,
-            external: () => this.metrics_url,
+            name: 'COMMON.SECTION_AUTOMATE',
+            links: [
+                {
+                    name: 'COMMON.SKILLS',
+                    route: '/skills',
+                    icon: 'auto_awesome',
+                },
+                { name: 'COMMON.TRIGGERS', route: '/triggers', icon: 'timer' },
+            ],
         },
         {
-            name: 'COMMON.USERS',
-            route: '/users',
-            icon: 'group',
-            show_on: () => this.is_support || this.is_admin,
+            name: 'COMMON.SECTION_MONITOR',
+            links: [
+                {
+                    name: 'COMMON.ALERTS',
+                    icon: 'notifications_active',
+                    show_on: () => !!this.alerts_url,
+                    external: () => this.alerts_url,
+                },
+                {
+                    name: 'COMMON.METRICS',
+                    icon: 'monitoring',
+                    show_on: () => !!this.metrics_url,
+                    external: () => this.metrics_url,
+                },
+            ],
         },
         {
-            name: 'COMMON.DOMAINS',
-            route: '/domains',
-            icon: 'domain',
-            show_on: () => this.is_admin,
-        },
-        {
-            name: 'COMMON.MANAGE',
-            route: '/admin',
-            icon: 'settings',
-            show_on: () => this.is_admin,
+            name: 'COMMON.SECTION_MANAGE',
+            links: [
+                {
+                    name: 'COMMON.USERS',
+                    route: '/users',
+                    icon: 'group',
+                    show_on: () => this.is_support || this.is_admin,
+                },
+                {
+                    name: 'COMMON.DOMAINS',
+                    route: '/domains',
+                    icon: 'domain',
+                    show_on: () => this.is_admin,
+                },
+                {
+                    name: 'COMMON.MANAGE',
+                    route: '/admin',
+                    icon: 'settings',
+                    show_on: () => this.is_admin,
+                },
+                {
+                    name: 'COMMON.REPOS',
+                    route: '/repositories',
+                    icon: 'inventory_2',
+                },
+            ],
         },
     ];
+
+    public isSectionVisible(section: MenuSection): boolean {
+        return section.links.some((link) => !link.show_on || link.show_on());
+    }
     /** Application logo */
     public get logo(): ApplicationIcon {
         return this._settings.get('app.logo_light');

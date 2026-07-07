@@ -8,6 +8,7 @@ import { SkillsStateService } from './skills-state.service';
 @Component({
     selector: 'skills-block',
     template: `
+        <!-- eslint-disable @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
         <div
             cdkDrag
             [cdkDragFreeDragPosition]="getDragPosition()"

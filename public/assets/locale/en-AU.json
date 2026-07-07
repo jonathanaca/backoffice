@@ -226,7 +226,11 @@
         "DATE_FROM_YEARS_AGO_1": "{{ years }} year ago",
         "DATE_FROM_YEARS_AGO_N": "{{ years }} years ago",
         "CRON_CUSTOM": "Custom",
-        "CONFIG": "Configuration"
+        "CONFIG": "Configuration",
+        "SECTION_OPERATE": "Operate",
+        "SECTION_AUTOMATE": "Automate",
+        "SECTION_MONITOR": "Monitor",
+        "SECTION_MANAGE": "Manage"
     },
     "SYSTEMS": {
         "SINGULAR": "System",
@@ -568,7 +572,17 @@
         "AGENT_PROMPT": "Agent Prompt",
         "MESSAGE_TEMPLATE": "Message Template",
         "RECIPIENTS": "Recipients",
-        "DELETE_BLOCK": "Delete Block"
+        "DELETE_BLOCK": "Delete Block",
+        "UNDO": "Undo (Ctrl+Z)",
+        "REDO": "Redo (Ctrl+Y)",
+        "ENABLE": "Enable this skill",
+        "DISABLE": "Disable this skill",
+        "ENABLED": "Enabled",
+        "DISABLED": "Disabled",
+        "ZOOM_IN": "Zoom in",
+        "ZOOM_OUT": "Zoom out",
+        "RESET_ZOOM": "Reset zoom to 100%",
+        "FIT_VIEW": "Fit workflow to view"
     },
     "TRIGGER": {
         "EDIT": "Edit trigger"

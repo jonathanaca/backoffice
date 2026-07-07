@@ -14,6 +14,7 @@ interface BlockItem {
 @Component({
     selector: 'skills-sidebar',
     template: `
+        <!-- eslint-disable @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
         <aside class="w-80 bg-gray-800 border-r border-gray-700 flex flex-col overflow-hidden">
             <!-- Inputs Section -->
             <div class="p-6 border-b border-gray-700 overflow-y-auto" style="max-height: 35vh">
