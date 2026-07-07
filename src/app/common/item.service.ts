@@ -150,9 +150,13 @@ export class ActiveItemService extends AsyncHandler {
             id.length > 2
         ) {
             const url = this._router.url.split('/');
-            this._type = url[1] as ResourceType;
+            // Map interfaces route to systems resource type
+            const route = url[1];
+            this._type = (route === 'interfaces' ? 'systems' : route) as ResourceType;
             if (!this.type)
                 return this.timeout('setItem', () => this.setItem(id));
+            // Routes without a backing resource service (e.g. skills) manage their own state
+            if (!this.actions) return;
             this._loading.next(true);
             this._active_item.next(null);
             const item = await this.actions
@@ -366,7 +370,9 @@ export class ActiveItemService extends AsyncHandler {
     private async updateType() {
         const url = this._router.url.split('/');
         const old_type = this._type;
-        this._type = url[1] as ResourceType;
+        // Map interfaces route to systems resource type
+        const route = url[1];
+        this._type = (route === 'interfaces' ? 'systems' : route) as ResourceType;
         if (old_type !== this._type) {
             log('Service', `Item type set to ${this._type}`);
             this._next_query.next(null);

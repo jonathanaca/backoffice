@@ -210,7 +210,9 @@ export class SidebarMenuComponent extends AsyncHandler implements OnInit {
         { name: 'COMMON.MODULES', route: '/modules', icon: 'tablet' },
         { name: 'COMMON.ZONES', route: '/zones', icon: 'meeting_room' },
         { name: 'COMMON.DRIVERS', route: '/drivers', icon: 'construction' },
+        // { name: 'Interfaces', route: '/interfaces', icon: 'web' }, // TODO: Fix interfaces module
         { name: 'COMMON.REPOS', route: '/repositories', icon: 'inventory_2' },
+        { name: 'COMMON.SKILLS', route: '/skills', icon: 'auto_awesome' },
         { name: 'COMMON.TRIGGERS', route: '/triggers', icon: 'timer' },
         {
             name: 'COMMON.ALERTS',

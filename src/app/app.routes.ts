@@ -36,6 +36,12 @@ export const appRoutes: Route[] = [
             import('./repositories/repositories.routes').then((m) => m.ROUTES),
     },
     {
+        path: 'skills',
+        canActivate: [AuthorisedUserGuard],
+        loadChildren: () =>
+            import('./skills/skills.routes').then((m) => m.ROUTES),
+    },
+    {
         path: 'triggers',
         canActivate: [AuthorisedUserGuard],
         loadChildren: () =>
@@ -53,6 +59,13 @@ export const appRoutes: Route[] = [
         loadChildren: () =>
             import('./zones/zones.routes').then((m) => m.ROUTES),
     },
+    // TODO: Fix interfaces module compilation errors
+    // {
+    //     path: 'interfaces',
+    //     canActivate: [AuthorisedUserGuard],
+    //     loadChildren: () =>
+    //         import('./interfaces/interfaces.routes').then((m) => m.ROUTES),
+    // },
     {
         path: 'admin',
         canActivate: [AuthorisedAdminGuard],

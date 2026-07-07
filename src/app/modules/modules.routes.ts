@@ -21,6 +21,13 @@ export const ROUTES: Routes = [
                     ),
             },
             {
+                path: 'ai-debug',
+                loadComponent: () =>
+                    import('./module-ai-debug.component').then(
+                        (m) => m.ModuleAIDebugComponent,
+                    ),
+            },
+            {
                 path: 'extend/:id',
                 loadComponent: () =>
                     import('../ui/extension-outlet.component').then(

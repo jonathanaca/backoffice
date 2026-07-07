@@ -3,14 +3,23 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { MatRippleModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { Router } from '@angular/router';
 import { PlaceSystem } from '@placeos/ts-client';
 import { marked } from 'marked';
 import { AsyncHandler } from '../common/async-handler.class';
+import { IconComponent } from '../ui/icon.component';
 import { SettingsFormComponent } from '../ui/forms/settings-form.component';
 import { DateFromPipe } from '../ui/pipes/date-from.pipe';
 import { SanitizePipe } from '../ui/pipes/sanitise.pipe';
 import { TranslatePipe } from '../ui/translate.pipe';
 import { SystemStateService } from './system-state.service';
+
+interface SystemInterface {
+    id: string;
+    name: string;
+    type: string;
+    repository: string;
+}
 
 @Component({
     selector: 'system-about',
@@ -179,20 +188,70 @@ import { SystemStateService } from './system-state.service';
                     </div>
                 </div>
             </section>
-            @if (item()?.description) {
-                <hr class="text-base-300 my-4" />
-                <div class="border-base-200 w-full rounded-sm border">
-                    <h3
-                        class="bg-base-200 w-full rounded-sm p-4 text-lg font-medium"
-                    >
-                        {{ 'COMMON.FIELD_DESCRIPTION' | translate }}
-                    </h3>
-                    <div
-                        class="markdown w-full overflow-auto p-4 text-sm"
-                        [innerHTML]="description() | sanitize"
-                    ></div>
-                </div>
-            }
+            <hr class="text-base-300 my-4" />
+            <div class="border-base-200 w-full rounded-sm border">
+                <h3
+                    class="bg-base-200 w-full rounded-sm p-4 text-lg font-medium flex items-center justify-between"
+                >
+                    <span>Interfaces</span>
+                    @if (item()?.support_url) {
+                        <a
+                            [href]="item()?.support_url"
+                            target="_blank"
+                            class="text-primary hover:underline text-sm font-normal flex items-center gap-1"
+                        >
+                            <icon class="text-base">open_in_new</icon>
+                            <span>Live Link</span>
+                        </a>
+                    }
+                </h3>
+                @if (system_interfaces().length === 0) {
+                    <div class="p-8 text-center opacity-60">
+                        <p>No interfaces configured for this system</p>
+                    </div>
+                } @else {
+                    <table class="w-full">
+                        <thead class="bg-base-200/50 border-base-200 border-t">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-sm font-medium">
+                                    Interface Name
+                                </th>
+                                <th class="px-4 py-2 text-left text-sm font-medium">
+                                    Type
+                                </th>
+                                <th class="px-4 py-2 text-left text-sm font-medium">
+                                    Repository
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-base-200 divide-y">
+                            @for (iface of system_interfaces(); track iface.id) {
+                                <tr class="hover:bg-base-200/50">
+                                    <td class="px-4 py-3">
+                                        <button
+                                            class="hover:text-primary font-medium text-left"
+                                            (click)="viewInterface(iface.id)"
+                                        >
+                                            {{ iface.name }}
+                                        </button>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <button
+                                            class="hover:text-primary text-sm"
+                                            (click)="viewInterface(iface.id)"
+                                        >
+                                            {{ iface.type }}
+                                        </button>
+                                    </td>
+                                    <td class="px-4 py-3 text-sm opacity-70">
+                                        {{ iface.repository }}
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
             <hr class="text-base-300 my-4" />
             @if (item()?.settings && other_settings) {
                 <section>
@@ -232,10 +291,12 @@ import { SystemStateService } from './system-state.service';
         SanitizePipe,
         MatRippleModule,
         MatTooltipModule,
+        IconComponent,
     ],
 })
 export class SystemAboutComponent extends AsyncHandler implements OnInit {
     private _service = inject(SystemStateService);
+    private _router = inject(Router);
 
     /** List of settings for associated modules, drivers and zones */
     public readonly other_settings = this._service.associated_settings;
@@ -244,17 +305,63 @@ export class SystemAboutComponent extends AsyncHandler implements OnInit {
     public readonly stop = () => this._service.stopSystem();
 
     public readonly item = signal<PlaceSystem | undefined>(undefined);
-    /** HTML string for rendering the description */
-    public readonly description = computed(() =>
-        marked(this.item().description || '', { async: false }),
-    );
+    public readonly system_interfaces = signal<SystemInterface[]>([]);
 
     public ngOnInit() {
         this.subscription(
             'item',
-            this._service.item.subscribe((item) =>
-                this.item.set(item as PlaceSystem),
-            ),
+            this._service.item.subscribe((item) => {
+                this.item.set(item as PlaceSystem);
+                this.loadSystemInterfaces(item as PlaceSystem);
+            }),
         );
+    }
+
+    private loadSystemInterfaces(system: PlaceSystem) {
+        if (!system) return;
+
+        // Mock interface data based on system
+        const all_interfaces: Record<string, SystemInterface[]> = {
+            'sys-1': [
+                {
+                    id: 'iface-workplace',
+                    name: 'Workplace',
+                    type: 'Desk Booking',
+                    repository: 'PlaceOS/workplace',
+                },
+                {
+                    id: 'iface-visitor-kiosk',
+                    name: 'Visitor Kiosk',
+                    type: 'Visitor Management',
+                    repository: 'PlaceOS/visitor-kiosk',
+                },
+                {
+                    id: 'iface-room-booking',
+                    name: 'Room Booking',
+                    type: 'Booking Panel',
+                    repository: 'PlaceOS/room-booking',
+                },
+            ],
+            'sys-4': [
+                {
+                    id: 'iface-av-control',
+                    name: 'AV Control Panel',
+                    type: 'Room Control',
+                    repository: 'PlaceOS/av-control',
+                },
+                {
+                    id: 'iface-room-booking',
+                    name: 'Room Booking',
+                    type: 'Booking Panel',
+                    repository: 'PlaceOS/room-booking',
+                },
+            ],
+        };
+
+        this.system_interfaces.set(all_interfaces[system.id] || []);
+    }
+
+    public viewInterface(interface_id: string) {
+        this._router.navigate(['/interfaces', interface_id, 'about']);
     }
 }

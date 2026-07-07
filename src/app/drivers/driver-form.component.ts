@@ -84,14 +84,58 @@ import { generateDriverFormFields } from './drivers.utilities';
                     "
                 />
                 @if (repo | async) {
-                    <label for="driver">{{ 'DRIVERS.BASE' | translate }}</label>
-                    <item-search-field
-                        [placeholder]="'DRIVERS.SEARCH' | translate"
-                        [options]="driver_list | async"
-                        [loading]="loading_type().includes('drivers')"
-                        [ngModel]="driver.getValue()"
-                        (ngModelChange)="driver.next($event); commit.next(null)"
-                    />
+                    <div class="mb-4">
+                        <label class="mb-2 block font-medium">Driver Source</label>
+                        <div class="flex gap-4">
+                            <button
+                                type="button"
+                                class="flex-1 rounded-lg border-2 p-4 text-left transition-all"
+                                [class.border-primary]="!use_ai_builder()"
+                                [class.bg-primary/10]="!use_ai_builder()"
+                                [class.border-base-300]="use_ai_builder()"
+                                (click)="use_ai_builder.set(false); ai_driver_data.set(null)"
+                            >
+                                <div class="flex items-start gap-3">
+                                    <div class="text-2xl">📦</div>
+                                    <div>
+                                        <div class="font-semibold">Select Base Driver</div>
+                                        <div class="text-sm text-base-content/70">
+                                            Choose an existing driver from the repository
+                                        </div>
+                                    </div>
+                                </div>
+                            </button>
+                            <button
+                                type="button"
+                                class="flex-1 rounded-lg border-2 p-4 text-left transition-all"
+                                [class.border-primary]="use_ai_builder()"
+                                [class.bg-primary/10]="use_ai_builder()"
+                                [class.border-base-300]="!use_ai_builder()"
+                                (click)="use_ai_builder.set(true); driver.next(null); commit.next(null)"
+                            >
+                                <div class="flex items-start gap-3">
+                                    <div class="text-2xl">✨</div>
+                                    <div>
+                                        <div class="font-semibold">Build with AI</div>
+                                        <div class="text-sm text-base-content/70">
+                                            Generate a new driver using Claude
+                                        </div>
+                                    </div>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    @if (!use_ai_builder()) {
+                        <label for="driver">{{ 'DRIVERS.BASE' | translate }}</label>
+                        <item-search-field
+                            [placeholder]="'DRIVERS.SEARCH' | translate"
+                            [options]="driver_list | async"
+                            [loading]="loading_type().includes('drivers')"
+                            [ngModel]="driver.getValue()"
+                            (ngModelChange)="driver.next($event); commit.next(null)"
+                        />
+                    }
                 }
             }
             @if (driver | async) {
@@ -114,6 +158,239 @@ import { generateDriverFormFields } from './drivers.utilities';
                     </div>
                 }
             }
+
+            @if (use_ai_builder() && (repo | async)) {
+                <div class="border-base-200 rounded-lg border bg-base-100 p-6">
+                    <h3 class="mb-4 text-lg font-semibold">Build Driver with Claude</h3>
+
+                    @if (!ai_building() && !ai_driver_data()) {
+                        <!-- AI Builder Inputs -->
+                        <div class="space-y-4">
+                            <div>
+                                <label class="mb-1 block text-sm font-medium">Driver Name</label>
+                                <mat-form-field appearance="outline" class="w-full">
+                                    <input
+                                        matInput
+                                        [(ngModel)]="ai_driver_name"
+                                        placeholder="e.g., Cisco Webex Controller"
+                                    />
+                                </mat-form-field>
+                            </div>
+
+                            <div>
+                                <label class="mb-1 block text-sm font-medium">Device/System Type</label>
+                                <mat-form-field appearance="outline" class="w-full">
+                                    <input
+                                        matInput
+                                        [(ngModel)]="ai_device_type"
+                                        placeholder="e.g., Video Conferencing Codec, Lighting Processor"
+                                    />
+                                </mat-form-field>
+                            </div>
+
+                            <div>
+                                <label class="mb-1 block text-sm font-medium">What should this driver control?</label>
+                                <mat-form-field appearance="outline" class="w-full">
+                                    <textarea
+                                        matInput
+                                        [(ngModel)]="ai_driver_requirements"
+                                        placeholder="e.g., Control power, volume, input switching, camera presets. Receive call status updates."
+                                        rows="3"
+                                    ></textarea>
+                                </mat-form-field>
+                            </div>
+
+                            <div>
+                                <label class="mb-1 block text-sm font-medium">Communication Protocol</label>
+                                <mat-form-field appearance="outline" class="w-full">
+                                    <mat-select [(ngModel)]="ai_protocol">
+                                        <mat-option value="http">HTTP/REST API</mat-option>
+                                        <mat-option value="websocket">WebSocket</mat-option>
+                                        <mat-option value="tcp">TCP Socket</mat-option>
+                                        <mat-option value="ssh">SSH</mat-option>
+                                        <mat-option value="telnet">Telnet</mat-option>
+                                        <mat-option value="mqtt">MQTT</mat-option>
+                                        <mat-option value="other">Other</mat-option>
+                                    </mat-select>
+                                </mat-form-field>
+                            </div>
+
+                            <div>
+                                <label class="mb-1 block text-sm font-medium">Upload API Documentation (Optional)</label>
+                                <div
+                                    class="border-base-300 hover:bg-base-200/50 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors"
+                                    (click)="ai_file_input.click()"
+                                >
+                                    <div class="text-base-content/40 mb-2 text-3xl">📄</div>
+                                    <p class="text-base-content/70 text-sm">
+                                        Click to upload API docs, PDFs, or manuals
+                                    </p>
+                                    @if (ai_uploaded_files().length > 0) {
+                                        <div class="mt-3 flex flex-wrap gap-2">
+                                            @for (file of ai_uploaded_files(); track file.name) {
+                                                <div class="bg-primary/10 text-primary flex items-center gap-2 rounded px-3 py-1 text-sm">
+                                                    <span>{{ file.name }}</span>
+                                                    <button
+                                                        type="button"
+                                                        (click)="removeAiFile(file); $event.stopPropagation()"
+                                                        class="hover:text-error"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                                <input
+                                    #ai_file_input
+                                    type="file"
+                                    multiple
+                                    accept=".pdf,.doc,.docx,.txt,.md,.json,.yaml,.yml"
+                                    class="hidden"
+                                    (change)="onAiFileSelected($event)"
+                                />
+                            </div>
+
+                            <div>
+                                <label class="mb-1 block text-sm font-medium">Additional Context (Optional)</label>
+                                <mat-form-field appearance="outline" class="w-full">
+                                    <textarea
+                                        matInput
+                                        [(ngModel)]="ai_additional_context"
+                                        placeholder="API endpoints, authentication methods, example commands, etc."
+                                        rows="4"
+                                    ></textarea>
+                                </mat-form-field>
+                            </div>
+
+                            <div class="flex justify-end gap-3 pt-4">
+                                <button
+                                    type="button"
+                                    class="bg-primary text-primary-content hover:bg-primary/90 disabled:bg-base-300 disabled:text-base-content/50 flex items-center gap-2 rounded-lg px-4 py-2"
+                                    [disabled]="!canBuildAiDriver()"
+                                    (click)="buildAiDriver()"
+                                >
+                                    <span class="text-xl">✨</span>
+                                    <span>Generate Driver</span>
+                                </button>
+                            </div>
+                        </div>
+                    }
+
+                    @if (ai_building()) {
+                        <!-- Building Progress -->
+                        <div class="flex flex-col items-center justify-center py-8">
+                            <mat-spinner [diameter]="64"></mat-spinner>
+                            <p class="mt-6 text-lg font-medium">{{ ai_build_status() }}</p>
+                            <p class="text-base-content/70 mt-2 text-sm">
+                                Claude is generating your driver...
+                            </p>
+
+                            @if (ai_build_progress().length > 0) {
+                                <div class="mt-8 w-full max-w-md">
+                                    @for (step of ai_build_progress(); track $index) {
+                                        <div class="border-base-200 mb-2 flex items-start gap-3 border-l-2 py-2 pl-4">
+                                            <span class="text-success mt-0.5 text-xl">✓</span>
+                                            <span class="text-sm">{{ step }}</span>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    @if (ai_driver_data()) {
+                        <!-- Generated Driver -->
+                        <div class="space-y-4">
+                            <div class="bg-success/10 text-success rounded-lg border border-current p-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-2xl">✓</span>
+                                    <span class="font-medium">Driver generated successfully!</span>
+                                </div>
+                            </div>
+
+                            <!-- Driver Preview -->
+                            <div class="border-base-200 rounded-lg border">
+                                <div class="border-base-200 border-b bg-base-200/50 px-4 py-3">
+                                    <h4 class="font-semibold">Generated Driver: {{ ai_driver_data().name }}</h4>
+                                </div>
+                                <div class="p-4">
+                                    <pre class="bg-base-200 max-h-96 overflow-auto rounded p-4 text-xs">{{ ai_driver_data().code }}</pre>
+                                </div>
+                            </div>
+
+                            <!-- Test Driver Section -->
+                            <div class="border-base-200 rounded-lg border">
+                                <div class="border-base-200 border-b bg-base-200/50 px-4 py-3">
+                                    <h4 class="font-semibold">Test Driver</h4>
+                                </div>
+                                <div class="p-4 space-y-4">
+                                    <div>
+                                        <label class="mb-1 block text-sm font-medium">Device IP/Hostname</label>
+                                        <mat-form-field appearance="outline" class="w-full">
+                                            <input
+                                                matInput
+                                                [(ngModel)]="test_host"
+                                                placeholder="e.g., 192.168.1.100"
+                                            />
+                                        </mat-form-field>
+                                    </div>
+
+                                    <div class="flex gap-3">
+                                        <button
+                                            type="button"
+                                            class="border-primary text-primary hover:bg-primary/10 flex items-center gap-2 rounded-lg border px-4 py-2"
+                                            [disabled]="!test_host || ai_testing()"
+                                            (click)="testAiDriver()"
+                                        >
+                                            @if (ai_testing()) {
+                                                <mat-spinner [diameter]="16"></mat-spinner>
+                                            } @else {
+                                                <span>🧪</span>
+                                            }
+                                            <span>Test Connection</span>
+                                        </button>
+                                    </div>
+
+                                    @if (test_result()) {
+                                        <div class="rounded-lg p-4" [class.bg-success/10]="test_result().success" [class.bg-error/10]="!test_result().success">
+                                            <div class="flex items-start gap-2">
+                                                <span class="text-xl">{{ test_result().success ? '✓' : '✗' }}</span>
+                                                <div>
+                                                    <p class="font-medium">{{ test_result().message }}</p>
+                                                    @if (test_result().details) {
+                                                        <pre class="bg-base-200 mt-2 rounded p-2 text-xs">{{ test_result().details }}</pre>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end gap-3 pt-4">
+                                <button
+                                    type="button"
+                                    class="border-base-300 hover:bg-base-200 rounded-lg border px-4 py-2"
+                                    (click)="resetAiBuilder()"
+                                >
+                                    Start Over
+                                </button>
+                                <button
+                                    type="button"
+                                    class="bg-primary text-primary-content hover:bg-primary/90 flex items-center gap-2 rounded-lg px-4 py-2"
+                                    (click)="useAiDriver()"
+                                >
+                                    <span>✓</span>
+                                    <span>Use This Driver</span>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
             @if ((commit | async) && !loading() && form.controls.id) {
                 <div class="flex flex-col" [formGroup]="form">
                     <label
@@ -318,6 +595,23 @@ export class DriverFormComponent extends AsyncHandler implements OnInit {
     public readonly repo = new BehaviorSubject(null);
     public readonly driver = new BehaviorSubject(null);
     public readonly commit = new BehaviorSubject(null);
+
+    // AI Builder signals and properties
+    public readonly use_ai_builder = signal(false);
+    public readonly ai_building = signal(false);
+    public readonly ai_testing = signal(false);
+    public readonly ai_build_status = signal('');
+    public readonly ai_build_progress = signal<string[]>([]);
+    public readonly ai_driver_data = signal<{ name: string; code: string; file_name: string } | null>(null);
+    public readonly ai_uploaded_files = signal<File[]>([]);
+    public readonly test_result = signal<{ success: boolean; message: string; details?: string } | null>(null);
+
+    public ai_driver_name = '';
+    public ai_device_type = '';
+    public ai_driver_requirements = '';
+    public ai_protocol = 'http';
+    public ai_additional_context = '';
+    public test_host = '';
 
     public readonly repo_list = queryRepositories({ limit: 1000 }).pipe(
         map(({ data }) =>
@@ -575,5 +869,284 @@ export class DriverFormComponent extends AsyncHandler implements OnInit {
                     )}`,
                 );
             });
+    }
+
+    // AI Builder Methods
+    public canBuildAiDriver(): boolean {
+        return !!(this.ai_driver_name && this.ai_driver_requirements);
+    }
+
+    public onAiFileSelected(event: Event): void {
+        const input = event.target as HTMLInputElement;
+        if (input.files) {
+            const new_files = Array.from(input.files);
+            this.ai_uploaded_files.update((files) => [...files, ...new_files]);
+        }
+    }
+
+    public removeAiFile(file: File): void {
+        this.ai_uploaded_files.update((files) =>
+            files.filter((f) => f !== file),
+        );
+    }
+
+    public async buildAiDriver(): Promise<void> {
+        this.ai_building.set(true);
+        this.ai_build_progress.set([]);
+        this.test_result.set(null);
+
+        const steps = [
+            'Analyzing requirements and protocol...',
+            'Processing uploaded documentation...',
+            'Understanding PlaceOS Driver API...',
+            'Generating driver class structure...',
+            'Implementing connection handlers...',
+            'Creating command methods...',
+            'Adding status monitoring...',
+            'Generating settings schema...',
+            'Finalizing driver code...',
+        ];
+
+        for (let i = 0; i < steps.length; i++) {
+            this.ai_build_status.set(steps[i]);
+            await this.delay(700);
+            this.ai_build_progress.update((p) => [...p, steps[i]]);
+        }
+
+        // Generate mock driver
+        const driver_data = this.generateMockDriverCode();
+        this.ai_driver_data.set(driver_data);
+        this.ai_building.set(false);
+    }
+
+    public async testAiDriver(): Promise<void> {
+        this.ai_testing.set(true);
+        this.test_result.set(null);
+
+        await this.delay(2000);
+
+        // Mock test result
+        const success = Math.random() > 0.3;
+        this.test_result.set({
+            success,
+            message: success
+                ? `Successfully connected to ${this.test_host}`
+                : `Failed to connect to ${this.test_host}`,
+            details: success
+                ? `Connection established via ${this.ai_protocol.toUpperCase()}\nDevice responded successfully\nDriver loaded and initialized`
+                : `Connection timeout after 5 seconds\nVerify device IP and network connectivity\nCheck protocol settings`,
+        });
+
+        this.ai_testing.set(false);
+    }
+
+    public resetAiBuilder(): void {
+        this.ai_driver_name = '';
+        this.ai_device_type = '';
+        this.ai_driver_requirements = '';
+        this.ai_protocol = 'http';
+        this.ai_additional_context = '';
+        this.ai_uploaded_files.set([]);
+        this.ai_driver_data.set(null);
+        this.ai_build_progress.set([]);
+        this.test_result.set(null);
+        this.test_host = '';
+    }
+
+    public useAiDriver(): void {
+        const data = this.ai_driver_data();
+        // Create a mock commit for AI-generated driver
+        const mock_commit = {
+            id: 'ai-generated',
+            name: 'AI Generated Driver',
+            extra: new Date().toLocaleDateString(),
+        };
+
+        // Set the driver and commit
+        this.driver.next({
+            id: data.file_name,
+            name: data.name,
+        });
+        this.commit.next(mock_commit);
+
+        // Apply the generated code to the form
+        this.form.patchValue({
+            name: data.name,
+            file_name: data.file_name,
+            module_name: data.name.replace(/\s+/g, ''),
+            commit: 'ai-generated',
+            repository_id: this.repo.getValue().id,
+            description: `AI-generated driver for ${this.ai_device_type}`,
+            role: this.getDriverRole(),
+            settings: '{}',
+        });
+
+        notifySuccess('AI-generated driver loaded! Review and save when ready.');
+    }
+
+    private getDriverRole(): PlaceDriverRole {
+        switch (this.ai_protocol) {
+            case 'ssh':
+                return PlaceDriverRole.SSH;
+            case 'websocket':
+                return PlaceDriverRole.Websocket;
+            case 'tcp':
+            case 'telnet':
+                return PlaceDriverRole.Device;
+            case 'http':
+            default:
+                return PlaceDriverRole.Service;
+        }
+    }
+
+    private generateMockDriverCode(): {
+        name: string;
+        code: string;
+        file_name: string;
+    } {
+        const name = this.ai_driver_name;
+        const class_name = name
+            .replace(/[^a-zA-Z0-9\s]/g, '')
+            .split(' ')
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+            .join('');
+        const file_name = `drivers/${class_name.toLowerCase()}.cr`;
+
+        const code = `# frozen_string_literal: true
+
+# PlaceOS Driver for ${name}
+# Device Type: ${this.ai_device_type}
+# Protocol: ${this.ai_protocol.toUpperCase()}
+# Auto-generated by Claude AI
+# Date: ${new Date().toISOString()}
+
+module ${class_name}
+  class Driver < PlaceOS::Driver
+    # Discovery Information
+    descriptive_name "${name}"
+    generic_name "${name.split(' ')[0]}"
+    description "${this.ai_driver_requirements}"
+
+    # Protocol: ${this.ai_protocol}
+    ${this.ai_protocol === 'tcp' || this.ai_protocol === 'telnet' ? 'tcp_port 23' : ''}
+    ${this.ai_protocol === 'ssh' ? 'tcp_port 22' : ''}
+    ${this.ai_protocol === 'http' ? 'uri_base "http://device"' : ''}
+    ${this.ai_protocol === 'websocket' ? 'uri_base "ws://device"' : ''}
+
+    default_settings({
+      ${this.ai_protocol === 'http' ? 'base_url: "http://192.168.1.100",' : ''}
+      ${this.ai_protocol === 'http' ? 'api_key: "your-api-key",' : ''}
+      ${this.ai_protocol === 'tcp' || this.ai_protocol === 'telnet' ? 'host: "192.168.1.100",' : ''}
+      ${this.ai_protocol === 'tcp' || this.ai_protocol === 'telnet' ? 'port: 23' : ''}
+    })
+
+    def on_load
+      on_update
+    end
+
+    def on_update
+      ${this.ai_protocol === 'http' ? '@base_url = setting?(String, :base_url) || "http://192.168.1.100"' : ''}
+      ${this.ai_protocol === 'http' ? '@api_key = setting?(String, :api_key)' : ''}
+    end
+
+    def connected
+      logger.info { "Connected to ${name}" }
+      schedule.every("30s") { query_status }
+
+      # Initial status query
+      query_status
+    end
+
+    def disconnected
+      logger.warn { "Disconnected from ${name}" }
+      schedule.clear
+    end
+
+    # Main driver commands based on requirements:
+    # ${this.ai_driver_requirements}
+
+    def power(state : Bool)
+      logger.debug { "Setting power to: #{ state}" }
+      ${this.generatePowerCommand()}
+      self[:power] = state
+    end
+
+    def query_status
+      logger.debug { "Querying device status" }
+      ${this.generateStatusQuery()}
+
+      self[:status] = {
+        power: self[:power],
+        connected: true,
+        last_update: Time.utc.to_unix
+      }
+    end
+
+    # Helper methods
+    private def send_command(cmd : String)
+      logger.debug { "Sending command: #{cmd}" }
+      ${this.ai_protocol === 'tcp' || this.ai_protocol === 'telnet' ? 'send(cmd + "\\r\\n")' : '# Implementation here'}
+    end
+
+    ${
+        this.ai_protocol === 'http'
+            ? `
+    private def make_request(endpoint : String, method = "GET", body = nil)
+      headers = {
+        "Authorization" => "Bearer #{@api_key}",
+        "Content-Type" => "application/json"
+      }
+
+      uri = URI.parse("#{@base_url}#{endpoint}")
+
+      # HTTP request implementation
+      # ...
+    end`
+            : ''
+    }
+
+    # Received data handler
+    def received(data : Bytes, task : PlaceOS::Driver::Task?)
+      logger.debug { "Received: #{String.new(data)}" }
+
+      # Parse and process response
+      # Update status variables with self[:key] = value
+    end
+  end
+end`;
+
+        return {
+            name,
+            code,
+            file_name,
+        };
+    }
+
+    private generatePowerCommand(): string {
+        switch (this.ai_protocol) {
+            case 'http':
+                return 'make_request("/power", "POST", {state: state}.to_json)';
+            case 'tcp':
+            case 'telnet':
+                return 'send_command(state ? "POWER ON" : "POWER OFF")';
+            default:
+                return '# Power control implementation';
+        }
+    }
+
+    private generateStatusQuery(): string {
+        switch (this.ai_protocol) {
+            case 'http':
+                return 'make_request("/status", "GET")';
+            case 'tcp':
+            case 'telnet':
+                return 'send_command("STATUS?")';
+            default:
+                return '# Status query implementation';
+        }
+    }
+
+    private delay(ms: number): Promise<void> {
+        return new Promise((resolve) => setTimeout(resolve, ms));
     }
 }

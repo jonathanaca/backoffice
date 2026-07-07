@@ -46,7 +46,8 @@ export async function setupPlace(settings: PlaceSettings): Promise<void> {
     const mock =
         settings.mock ||
         location.href.includes('mock=true') ||
-        localStorage.getItem('BACKOFFICE.mock') === 'true';
+        localStorage.getItem('BACKOFFICE.mock') === 'true' ||
+        (host.includes('localhost') && port === '4200'); // Always mock on localhost:4200
     // Generate configuration object
     const config: PlaceAuthOptions = {
         auth_type: 'auth_code',

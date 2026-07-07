@@ -1,0 +1,289 @@
+import { Component, OnInit, signal, computed } from '@angular/core';
+import { Router } from '@angular/router';
+import { MatRippleModule } from '@angular/material/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
+import { querySystems, PlaceSystem } from '@placeos/ts-client';
+import { AsyncHandler } from '../common/async-handler.class';
+import { IconComponent } from '../ui/icon.component';
+import { SidebarMenuComponent } from '../ui/sidebar-menu.component';
+import { SkillData } from './skills.types';
+import { SkillsStateService } from './skills-state.service';
+
+@Component({
+    selector: 'skills-list',
+    template: `
+        <div class="bg-base-100 absolute inset-0 flex">
+            <sidebar-menu class="sm:h-full"></sidebar-menu>
+            <div class="flex h-full flex-1 flex-col overflow-hidden">
+                <div class="border-base-200 flex items-center justify-between border-b px-6 py-4">
+                    <h1 class="text-2xl font-semibold">Skills</h1>
+                    <button
+                        class="bg-secondary text-secondary-content flex items-center space-x-2 rounded-lg px-4 py-2"
+                        matRipple
+                        (click)="createNewSkill()"
+                    >
+                        <icon>add</icon>
+                        <span>New Skill</span>
+                    </button>
+                </div>
+
+                <div class="flex-1 overflow-auto p-6">
+                    @if (skills().length === 0) {
+                        <div
+                            class="border-base-200 bg-base-100 flex flex-col items-center justify-center rounded-lg border p-12 text-center"
+                        >
+                            <icon class="text-base-content mb-4 text-6xl opacity-30"
+                                >auto_awesome</icon
+                            >
+                            <h3 class="text-base-content mb-2 text-lg font-medium">
+                                No Skills Yet
+                            </h3>
+                            <p class="text-base-content mb-4 max-w-md opacity-60">
+                                Create your first automation skill. Skills let you build
+                                visual workflows that connect inputs to outputs.
+                            </p>
+                            <button
+                                class="bg-secondary text-secondary-content flex items-center space-x-2 rounded-lg px-6 py-3"
+                                matRipple
+                                (click)="createNewSkill()"
+                            >
+                                <icon>add</icon>
+                                <span>Create First Skill</span>
+                            </button>
+                        </div>
+                    } @else {
+                        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            @for (skill of skills(); track skill.createdAt) {
+                                <div
+                                    class="border-base-200 bg-base-100 group relative cursor-pointer rounded-lg border p-4 transition-all hover:shadow-lg"
+                                    matRipple
+                                    (click)="openSkill(skill)"
+                                >
+                                    <div class="mb-2 flex items-start justify-between">
+                                        <h3
+                                            class="text-base-content flex-1 truncate font-medium"
+                                        >
+                                            {{ skill.name }}
+                                        </h3>
+                                        <icon
+                                            class="text-base-content opacity-0 transition-opacity group-hover:opacity-100"
+                                            >chevron_right</icon
+                                        >
+                                    </div>
+                                    <p
+                                        class="text-base-content mb-3 line-clamp-2 text-sm opacity-60"
+                                    >
+                                        {{ skill.description }}
+                                    </p>
+                                    <div
+                                        class="text-base-content flex items-center space-x-4 text-xs opacity-40"
+                                    >
+                                        <span>{{ skill.blocks?.length || 0 }} blocks</span>
+                                        <span
+                                            >{{ skill.connections?.length || 0 }}
+                                            connections</span
+                                        >
+                                    </div>
+                                    <div class="text-base-content mt-2 text-xs opacity-30">
+                                        Created {{ formatDate(skill.createdAt) }}
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- System Selector Modal -->
+            @if (show_system_selector()) {
+                <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div class="bg-base-100 border border-base-200 rounded-lg shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+                        <!-- Modal Header -->
+                        <div class="p-6 border-b border-base-200">
+                            <h2 class="text-xl font-semibold text-base-content">Select a System</h2>
+                            <p class="text-sm text-base-content/60 mt-1">Choose which system this skill will be created for</p>
+                        </div>
+
+                        <!-- Search Input -->
+                        <div class="p-4 border-b border-base-200">
+                            <div class="relative">
+                                <icon class="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40">search</icon>
+                                <input
+                                    type="text"
+                                    [(ngModel)]="search_query"
+                                    placeholder="Search systems..."
+                                    class="w-full bg-base-200 border border-base-300 rounded-lg pl-10 pr-4 py-2 text-base-content placeholder:text-base-content/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Modal Content -->
+                        <div class="flex-1 overflow-y-auto p-6">
+                            @if (loading_systems()) {
+                                <div class="flex items-center justify-center py-12">
+                                    <div class="text-base-content/60">Loading systems...</div>
+                                </div>
+                            } @else if (filtered_systems().length === 0) {
+                                <div class="flex items-center justify-center py-12">
+                                    <div class="text-center">
+                                        <icon class="text-base-content/30 text-5xl mb-2">meeting_room</icon>
+                                        <p class="text-base-content/60">No systems found</p>
+                                    </div>
+                                </div>
+                            } @else {
+                                <div class="space-y-2">
+                                    @for (system of filtered_systems(); track system.id) {
+                                        <div
+                                            class="border rounded-lg p-3 cursor-pointer transition-all"
+                                            [class.border-blue-500]="selected_system_id() === system.id"
+                                            [class.bg-blue-500/10]="selected_system_id() === system.id"
+                                            [class.border-base-300]="selected_system_id() !== system.id"
+                                            [class.hover:bg-base-200]="selected_system_id() !== system.id"
+                                            (click)="selected_system_id.set(system.id)"
+                                        >
+                                            <div class="flex items-center space-x-3">
+                                                <div
+                                                    class="w-4 h-4 rounded-full border-2 flex items-center justify-center"
+                                                    [class.border-blue-500]="selected_system_id() === system.id"
+                                                    [class.border-base-300]="selected_system_id() !== system.id"
+                                                >
+                                                    @if (selected_system_id() === system.id) {
+                                                        <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                                                    }
+                                                </div>
+                                                <div class="flex-1">
+                                                    <div class="text-base-content font-medium">{{ system.name }}</div>
+                                                    @if (system.description) {
+                                                        <div class="text-xs text-base-content/60">{{ system.description }}</div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Modal Footer -->
+                        <div class="p-6 border-t border-base-200 flex items-center justify-end space-x-3">
+                            <button
+                                matRipple
+                                (click)="cancelSystemSelection()"
+                                class="px-4 py-2 text-base-content/60 hover:text-base-content transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                matRipple
+                                (click)="confirmSystemSelection()"
+                                [disabled]="!selected_system_id()"
+                                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Continue
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    `,
+    styles: [
+        `
+            .line-clamp-2 {
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+        `,
+    ],
+    imports: [IconComponent, MatRippleModule, SidebarMenuComponent, CommonModule, FormsModule],
+})
+export class SkillsListComponent extends AsyncHandler implements OnInit {
+    public readonly skills = signal<SkillData[]>([]);
+    public readonly show_system_selector = signal(false);
+    public readonly systems = signal<PlaceSystem[]>([]);
+    public readonly selected_system_id = signal<string>('');
+    public readonly loading_systems = signal(false);
+    public readonly search_query = signal<string>('');
+
+    public readonly filtered_systems = computed(() => {
+        const query = this.search_query().toLowerCase();
+        if (!query) return this.systems();
+        return this.systems().filter(system =>
+            system.name.toLowerCase().includes(query) ||
+            system.description?.toLowerCase().includes(query)
+        );
+    });
+
+    constructor(
+        private _router: Router,
+        private _skills_state: SkillsStateService,
+    ) {
+        super();
+    }
+
+    public ngOnInit(): void {
+        this.loadSkills();
+        this.loadSystems();
+    }
+
+    private loadSkills(): void {
+        const saved_skills = localStorage.getItem('BACKOFFICE.SKILLS');
+        if (saved_skills) {
+            try {
+                this.skills.set(JSON.parse(saved_skills));
+            } catch (e) {
+                console.error('Failed to load skills', e);
+                this.skills.set([]);
+            }
+        }
+    }
+
+    private async loadSystems(): Promise<void> {
+        this.loading_systems.set(true);
+        try {
+            const response = await firstValueFrom(querySystems({ limit: 500 }));
+            this.systems.set(response.data);
+        } catch (e) {
+            console.error('Failed to load systems', e);
+        } finally {
+            this.loading_systems.set(false);
+        }
+    }
+
+    public createNewSkill(): void {
+        this.show_system_selector.set(true);
+    }
+
+    public cancelSystemSelection(): void {
+        this.show_system_selector.set(false);
+        this.selected_system_id.set('');
+    }
+
+    public confirmSystemSelection(): void {
+        const system_id = this.selected_system_id();
+        if (!system_id) {
+            alert('Please select a system before continuing');
+            return;
+        }
+
+        this._skills_state.clearWorkflow();
+        this._skills_state.setSystemId(system_id);
+        this._skills_state.loadSystemModules(system_id);
+        this.show_system_selector.set(false);
+        this._router.navigate(['/skills', 'new']);
+    }
+
+    public openSkill(skill: SkillData): void {
+        this._skills_state.loadSkill(skill);
+        this._router.navigate(['/skills', skill.createdAt]);
+    }
+
+    public formatDate(iso_string: string): string {
+        const date = new Date(iso_string);
+        return date.toLocaleDateString();
+    }
+}

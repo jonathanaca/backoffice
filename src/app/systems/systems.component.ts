@@ -149,10 +149,21 @@ export class SystemsComponent extends AsyncHandler implements OnInit {
                     icon: { content: 'tablet' },
                 },
                 {
+                    id: 'ai-configure',
+                    name: 'Configure with Claude',
+                    icon: { content: 'auto_awesome' },
+                },
+                {
                     id: 'zones',
                     name: i18n('SYSTEMS.TAB_ZONES'),
                     count: counts?.zones ?? '?',
                     icon: { content: 'layers' },
+                },
+                {
+                    id: 'skills',
+                    name: i18n('SYSTEMS.TAB_SKILLS'),
+                    count: counts?.skills ?? '?',
+                    icon: { content: 'auto_awesome' },
                 },
                 {
                     id: 'triggers',

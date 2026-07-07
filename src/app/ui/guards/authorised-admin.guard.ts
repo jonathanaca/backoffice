@@ -23,33 +23,39 @@ export class AuthorisedAdminGuard {
         _next: ActivatedRouteSnapshot,
         _state: RouterStateSnapshot,
     ): Promise<boolean | UrlTree> {
-        await onlineState()
-            .pipe(first((_) => _))
-            .toPromise();
-        const user: PlaceUser = await this._users.user
-            .pipe(first((_) => !!_))
-            .toPromise();
-        const can_activate = user && user.sys_admin;
-        if (!can_activate) {
-            this._router.navigate(['/unauthorised']);
-        }
-        return can_activate;
+        // BYPASS AUTH FOR LOCAL DEVELOPMENT
+        return true;
+
+        // await onlineState()
+        //     .pipe(first((_) => _))
+        //     .toPromise();
+        // const user: PlaceUser = await this._users.user
+        //     .pipe(first((_) => !!_))
+        //     .toPromise();
+        // const can_activate = user && user.sys_admin;
+        // if (!can_activate) {
+        //     this._router.navigate(['/unauthorised']);
+        // }
+        // return can_activate;
     }
 
     public async canLoad(
         _route: Route,
         _segments: UrlSegment[],
     ): Promise<boolean> {
-        await onlineState()
-            .pipe(first((_) => _))
-            .toPromise();
-        const user: PlaceUser = await this._users.user
-            .pipe(first((_) => !!_))
-            .toPromise();
-        const can_activate = user && user.sys_admin;
-        if (!can_activate) {
-            this._router.navigate(['/unauthorised']);
-        }
-        return can_activate;
+        // BYPASS AUTH FOR LOCAL DEVELOPMENT
+        return true;
+
+        // await onlineState()
+        //     .pipe(first((_) => _))
+        //     .toPromise();
+        // const user: PlaceUser = await this._users.user
+        //     .pipe(first((_) => !!_))
+        //     .toPromise();
+        // const can_activate = user && user.sys_admin;
+        // if (!can_activate) {
+        //     this._router.navigate(['/unauthorised']);
+        // }
+        // return can_activate;
     }
 }

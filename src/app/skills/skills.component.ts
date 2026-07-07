@@ -1,9 +1,7 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
+import { MatRippleModule } from '@angular/material/core';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterModule } from '@angular/router';
-import { PlaceModule, querySystems } from '@placeos/ts-client';
-import { lastValueFrom } from 'rxjs';
-import { extensionsForItem } from '../common/api';
 import { AsyncHandler } from '../common/async-handler.class';
 import { PlaceDebugService } from '../common/debug.service';
 import { ActiveItemService } from '../common/item.service';
@@ -19,7 +17,7 @@ import { SidebarMenuComponent } from '../ui/sidebar-menu.component';
 import { TranslatePipe } from '../ui/translate.pipe';
 
 @Component({
-    selector: 'new-modules-view',
+    selector: 'skills-view',
     template: `
         <div
             class="divide-base-200 bg-base-100 absolute inset-0 flex items-center divide-y sm:divide-x sm:divide-y-0"
@@ -30,19 +28,19 @@ import { TranslatePipe } from '../ui/translate.pipe';
                     <item-sidebar
                         class="hidden sm:block"
                         [route]="name"
-                        [title]="'MODULES.PLURAL' | translate"
+                        [title]="'SKILLS.PLURAL' | translate"
                     ></item-sidebar>
                     <div class="relative z-0 flex h-full w-1/2 flex-1 flex-col">
                         <item-selection
                             class="z-20 sm:hidden"
                             [route]="name"
-                            [title]="'MODULES.PLURAL' | translate"
+                            [title]="'SKILLS.PLURAL' | translate"
                         >
                             <button
+                                btn
                                 icon
-                                matRipple
                                 class="mr-2 sm:hidden"
-                                (click)="open_menu.set(true)"
+                                (click)="open_menu = true"
                             >
                                 <icon>menu</icon>
                             </button>
@@ -54,11 +52,11 @@ import { TranslatePipe } from '../ui/translate.pipe';
                                 <item-details
                                     [can_edit]="true"
                                     [item]="item()"
-                                    [type]="'MODULES.SINGULAR' | translate"
+                                    [type]="'SKILLS.SINGULAR' | translate"
                                 ></item-details>
                                 <item-tablist
                                     [base]="name"
-                                    [tabs]="tab_list()"
+                                    [tabs]="tab_list"
                                     [scrolled]="scroll() > 0"
                                     class="z-10"
                                 ></item-tablist>
@@ -73,7 +71,7 @@ import { TranslatePipe } from '../ui/translate.pipe';
                         </div>
                         <button
                             class="border-base-200 bg-secondary text-secondary-content absolute bottom-2 left-2 z-30 flex h-12 w-12 items-center justify-center rounded-lg border shadow-sm sm:-left-9"
-                            [matTooltip]="'MODULES.NEW' | translate"
+                            [matTooltip]="'SKILLS.NEW' | translate"
                             matTooltipPosition="right"
                             matRipple
                             (click)="newItem()"
@@ -98,10 +96,10 @@ import { TranslatePipe } from '../ui/translate.pipe';
     imports: [
         DebugOutputComponent,
         IconComponent,
-        IconComponent,
         TranslatePipe,
-        MatTooltipModule,
         RouterModule,
+        MatRippleModule,
+        MatTooltipModule,
         ItemTablistComponent,
         ItemDetailsComponent,
         ItemDetailsSkeletonComponent,
@@ -110,49 +108,29 @@ import { TranslatePipe } from '../ui/translate.pipe';
         SidebarMenuComponent,
     ],
 })
-export class ModulesComponent extends AsyncHandler implements OnInit {
-    private _service = inject(ActiveItemService);
+export class SkillsComponent extends AsyncHandler implements OnInit {
+    protected _service = inject(ActiveItemService);
     private _debug = inject(PlaceDebugService);
 
-    public readonly name = 'modules';
-    public readonly item = signal<PlaceModule>(null);
+    public readonly name = 'skills';
+
+    public open_menu = false;
+    public tab_list = [];
     public readonly loading = signal(false);
-    /** Number of systems for the active device */
-    public readonly system_count = signal(undefined);
-    public readonly open_menu = signal(false);
-    public readonly scroll = signal(0);
     public readonly debug_position = this._debug.position;
+    public readonly item = signal<any>(null);
     public readonly newItem = () => this._service.create();
+    public readonly scroll = signal(0);
 
-    public get extensions() {
-        return extensionsForItem(this._service.active_item, this.name);
-    }
-
-    public readonly tab_list = computed(() =>
-        [
+    public updateTabList() {
+        this.tab_list = [
             {
                 id: 'about',
-                name: i18n('MODULES.TAB_ABOUT'),
+                name: i18n('SKILLS.TAB_ABOUT'),
                 icon: { content: 'info' },
             },
-            {
-                id: 'systems',
-                name: i18n('MODULES.TAB_SYSTEMS'),
-                count: this.system_count(),
-                icon: { content: 'meeting_room' },
-            },
-            {
-                id: 'ai-debug',
-                name: 'AI Debugging',
-                icon: { content: 'auto_awesome' },
-            },
-            {
-                id: 'history',
-                name: i18n('MODULES.TAB_SETTINGS_HISTORY'),
-                icon: { content: 'schedule' },
-            },
-        ].concat(this.extensions),
-    );
+        ];
+    }
 
     public ngOnInit(): void {
         this.subscription(
@@ -162,21 +140,9 @@ export class ModulesComponent extends AsyncHandler implements OnInit {
         this.subscription(
             'item',
             this._service.item.subscribe((item) => {
-                this.item.set(item as PlaceModule);
-                this.system_count.set(undefined);
-                this.loadValues(item as PlaceModule);
+                this.item.set(item);
             }),
         );
-    }
-
-    protected async loadValues(item: PlaceModule) {
-        if (!item) return;
-        const query: Record<string, unknown> = {
-            offset: 0,
-            limit: 1,
-            module_id: item.id,
-        };
-        // Get system count
-        this.system_count.set((await lastValueFrom(querySystems(query))).total);
+        this.updateTabList();
     }
 }

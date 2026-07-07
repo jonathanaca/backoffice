@@ -21,6 +21,20 @@ export const ROUTES: Routes = [
                     ),
             },
             {
+                path: 'ai-configure',
+                loadComponent: () =>
+                    import('./system-ai-configure.component').then(
+                        (m) => m.SystemAIConfigureComponent,
+                    ),
+            },
+            {
+                path: 'skills',
+                loadComponent: () =>
+                    import('./system-skills.component').then(
+                        (m) => m.SystemSkillsComponent,
+                    ),
+            },
+            {
                 path: 'triggers',
                 loadComponent: () =>
                     import('./system-triggers.component').then(
