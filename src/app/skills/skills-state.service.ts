@@ -2,6 +2,8 @@ import { computed, Injectable, signal } from '@angular/core';
 import { queryModules, PlaceModule } from '@placeos/ts-client';
 import { firstValueFrom } from 'rxjs';
 import {
+    BlockModuleRef,
+    CATEGORY_MODULE_PATTERNS,
     Connection,
     ExecutionMode,
     PlaceOSModule,
@@ -81,6 +83,50 @@ export class SkillsStateService {
             console.error('Failed to load modules for system', system_id, e);
             this.available_modules.set([]);
         }
+        this._backfillBlockModules();
+    }
+
+    /** Whether a block category is backed by a hardware module at all */
+    public categoryNeedsModule(category: string): boolean {
+        return !!CATEGORY_MODULE_PATTERNS[category]?.length;
+    }
+
+    /**
+     * Find the system module backing a block category, matching the same
+     * name patterns used for palette availability.
+     */
+    public resolveModuleForCategory(category: string): BlockModuleRef | null {
+        const patterns = CATEGORY_MODULE_PATTERNS[category];
+        if (!patterns?.length) return null;
+        const module = this.available_modules().find((m) => {
+            const module_name = (m.name || '').toLowerCase();
+            const custom_name = (m.custom_name || '').toLowerCase();
+            return patterns.some(
+                (pattern) =>
+                    module_name.includes(pattern.toLowerCase()) ||
+                    custom_name.includes(pattern.toLowerCase()),
+            );
+        });
+        return module
+            ? { id: module.id, name: module.custom_name || module.name }
+            : null;
+    }
+
+    /** Link source modules to blocks added before the module list loaded */
+    private _backfillBlockModules(): void {
+        if (!this.available_modules().length) return;
+        const resolvable = (b: WorkflowBlock) =>
+            (b.type === 'input' || b.type === 'output') &&
+            b.module === undefined &&
+            this.categoryNeedsModule(b.category);
+        if (!this.blocks().some(resolvable)) return;
+        this.blocks.update((blocks) =>
+            blocks.map((b) =>
+                resolvable(b)
+                    ? { ...b, module: this.resolveModuleForCategory(b.category) }
+                    : b,
+            ),
+        );
     }
 
     public setExecutionMode(mode: ExecutionMode): void {
@@ -184,6 +230,16 @@ export class SkillsStateService {
             position: snapped_position,
             id: `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         };
+        if (
+            new_block.module === undefined &&
+            (new_block.type === 'input' || new_block.type === 'output') &&
+            this.categoryNeedsModule(new_block.category) &&
+            this.available_modules().length
+        ) {
+            new_block.module = this.resolveModuleForCategory(
+                new_block.category,
+            );
+        }
         this.blocks.update((blocks) => [...blocks, new_block]);
     }
 

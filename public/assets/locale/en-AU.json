@@ -582,7 +582,9 @@
         "ZOOM_IN": "Zoom in",
         "ZOOM_OUT": "Zoom out",
         "RESET_ZOOM": "Reset zoom to 100%",
-        "FIT_VIEW": "Fit workflow to view"
+        "FIT_VIEW": "Fit workflow to view",
+        "SOURCE_MODULE": "Source module",
+        "NO_MODULE_LINKED": "No matching module in this system"
     },
     "TRIGGER": {
         "EDIT": "Edit trigger"

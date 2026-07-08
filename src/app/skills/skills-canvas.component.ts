@@ -16,53 +16,53 @@ const BLOCK_HEIGHT = 110;
     selector: 'skills-canvas',
     template: `
         <!-- eslint-disable @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
-        <div class="flex-1 relative overflow-hidden bg-gray-900">
+        <div class="flex-1 relative overflow-hidden bg-base-200">
             <!-- Canvas Controls -->
             <div class="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center space-x-3">
                 <div class="relative">
                     <button
                         (click)="automation_dropdown_open.set(!automation_dropdown_open())"
-                        class="flex items-center space-x-2 bg-gray-700/80 hover:bg-gray-600/80 border border-gray-500 px-4 py-2 rounded-lg transition-colors backdrop-blur-sm"
+                        class="flex items-center space-x-2 bg-base-100 hover:bg-base-200 border border-base-300 px-4 py-2 rounded-lg shadow-sm transition-colors"
                     >
-                        <icon class="text-gray-300">bolt</icon>
-                        <span class="text-sm font-medium text-gray-200">Automation</span>
-                        <icon [class]="'w-4 h-4 text-gray-400 transition-transform ' + (automation_dropdown_open() ? 'rotate-180' : '')">expand_more</icon>
+                        <icon class="text-secondary">bolt</icon>
+                        <span class="text-sm font-medium text-base-content">Automation</span>
+                        <icon [class]="'w-4 h-4 text-base-content/50 transition-transform ' + (automation_dropdown_open() ? 'rotate-180' : '')">expand_more</icon>
                     </button>
 
                     <!-- Dropdown Menu -->
                     @if (automation_dropdown_open()) {
-                        <div class="absolute top-full left-0 mt-2 w-56 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-50 backdrop-blur-sm">
+                        <div class="absolute top-full left-0 mt-2 w-56 bg-base-100 border border-base-200 rounded-lg shadow-xl z-50">
                             <div class="py-2">
                                 <button
                                     (click)="addAutomationBlock('agent')"
-                                    class="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-700 transition-colors"
+                                    class="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-base-200 transition-colors"
                                 >
-                                    <icon class="text-red-400">smart_toy</icon>
+                                    <icon class="text-red-500">smart_toy</icon>
                                     <div>
-                                        <div class="text-sm font-medium text-white">Agent Block</div>
-                                        <div class="text-xs text-gray-400">AI-powered decision making</div>
+                                        <div class="text-sm font-medium text-base-content">Agent Block</div>
+                                        <div class="text-xs text-base-content/60">AI-powered decision making</div>
                                     </div>
                                 </button>
 
                                 <button
                                     (click)="addAutomationBlock('logic')"
-                                    class="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-700 transition-colors"
+                                    class="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-base-200 transition-colors"
                                 >
-                                    <icon class="text-purple-400">settings</icon>
+                                    <icon class="text-purple-500">settings</icon>
                                     <div>
-                                        <div class="text-sm font-medium text-white">Logic Block</div>
-                                        <div class="text-xs text-gray-400">Conditional logic and rules</div>
+                                        <div class="text-sm font-medium text-base-content">Logic Block</div>
+                                        <div class="text-xs text-base-content/60">Conditional logic and rules</div>
                                     </div>
                                 </button>
 
                                 <button
                                     (click)="addAutomationBlock('communication')"
-                                    class="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-700 transition-colors"
+                                    class="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-base-200 transition-colors"
                                 >
-                                    <icon class="text-orange-400">chat</icon>
+                                    <icon class="text-orange-500">chat</icon>
                                     <div>
-                                        <div class="text-sm font-medium text-white">Communication</div>
-                                        <div class="text-xs text-gray-400">Send notifications and messages</div>
+                                        <div class="text-sm font-medium text-base-content">Communication</div>
+                                        <div class="text-xs text-base-content/60">Send notifications and messages</div>
                                     </div>
                                 </button>
                             </div>
@@ -212,14 +212,14 @@ const BLOCK_HEIGHT = 110;
                 @if (blocks().length === 0) {
                     <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <div class="text-center">
-                            <div class="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <icon class="text-gray-500 text-4xl">bolt</icon>
+                            <div class="w-16 h-16 bg-base-300 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <icon class="text-base-content/40 text-4xl">bolt</icon>
                             </div>
-                            <h3 class="text-lg font-medium text-gray-300 mb-2">Start Building Your Workflow</h3>
-                            <p class="text-gray-500 max-w-md mx-auto">
+                            <h3 class="text-lg font-medium text-base-content mb-2">Start Building Your Workflow</h3>
+                            <p class="text-base-content/60 max-w-md mx-auto">
                                 Drag blocks from the sidebar onto the canvas to create your automation workflow.
                             </p>
-                            <div class="mt-4 text-sm text-gray-600">
+                            <div class="mt-4 text-sm text-base-content/50">
                                 <p><strong>How to connect:</strong> Click the right connector (output) on one block, then click the left connector (input) on another block</p>
                                 <p class="mt-1">Connected blocks show green connectors, unconnected ones are gray</p>
                             </div>
@@ -305,7 +305,7 @@ export class SkillsCanvasComponent {
     public readonly Math = Math;
 
     public getCanvasClasses(): string {
-        const base = 'w-full h-full relative bg-gray-900 transition-colors duration-200';
+        const base = 'w-full h-full relative transition-colors duration-200';
         const cursor = this.is_connecting()
             ? 'cursor-crosshair'
             : this.is_panning()

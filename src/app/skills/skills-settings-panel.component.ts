@@ -27,6 +27,31 @@ import { WorkflowBlock } from './skills.types';
                         <span class="text-base-content/80">{{ block.category }}</span>
                         <span class="text-base-content/50 capitalize">({{ block.type }})</span>
                     </div>
+
+                    <!-- Source Module -->
+                    @if (block.type === 'input' || block.type === 'output') {
+                        @if (block.module; as mod) {
+                            <div class="bg-base-200 mt-3 flex items-center space-x-2 rounded-lg px-3 py-2">
+                                <icon class="text-base-content/50">cable</icon>
+                                <div class="min-w-0 flex-1">
+                                    <div class="text-base-content/50 text-[10px] font-semibold tracking-wider uppercase">
+                                        {{ 'SKILLS.SOURCE_MODULE' | translate }}
+                                    </div>
+                                    <div class="text-base-content truncate text-sm">{{ mod.name }}</div>
+                                </div>
+                            </div>
+                        } @else if (block.module === null) {
+                            <div class="bg-amber-500/10 mt-3 flex items-center space-x-2 rounded-lg px-3 py-2">
+                                <icon class="text-amber-600">link_off</icon>
+                                <div class="min-w-0 flex-1">
+                                    <div class="text-amber-600/80 text-[10px] font-semibold tracking-wider uppercase">
+                                        {{ 'SKILLS.SOURCE_MODULE' | translate }}
+                                    </div>
+                                    <div class="text-amber-700 text-sm">{{ 'SKILLS.NO_MODULE_LINKED' | translate }}</div>
+                                </div>
+                            </div>
+                        }
+                    }
                 </div>
 
                 <!-- Settings Content -->

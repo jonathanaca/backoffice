@@ -1,3 +1,5 @@
+const colors = require('tailwindcss/colors');
+
 module.exports = {
     prefix: '',
     important: '#placeos',
@@ -6,6 +8,15 @@ module.exports = {
     darkMode: 'class', // or 'media' or 'class'
     theme: {
         colors: {
+            // Standard palettes (used by the skills builder block colour-coding)
+            gray: colors.gray,
+            blue: colors.blue,
+            green: colors.green,
+            red: colors.red,
+            purple: colors.purple,
+            orange: colors.orange,
+            yellow: colors.yellow,
+            amber: colors.amber,
             primary: 'var(--primary)',
             'primary-focus': 'var(--primary-focus)',
             'primary-content': 'var(--primary-content)',

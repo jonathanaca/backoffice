@@ -4,6 +4,7 @@ import { CdkDrag, CdkDragStart, CdkDropList } from '@angular/cdk/drag-drop';
 import { IconComponent } from '../ui/icon.component';
 import { TranslatePipe } from '../ui/translate.pipe';
 import { SkillsStateService } from './skills-state.service';
+import { CATEGORY_MODULE_PATTERNS } from './skills.types';
 
 interface BlockItem {
     category: string;
@@ -15,10 +16,10 @@ interface BlockItem {
     selector: 'skills-sidebar',
     template: `
         <!-- eslint-disable @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
-        <aside class="w-80 bg-gray-800 border-r border-gray-700 flex flex-col overflow-hidden">
+        <aside class="w-80 h-full bg-base-100 border-r border-base-200 flex flex-col overflow-hidden">
             <!-- Inputs Section -->
-            <div class="p-6 border-b border-gray-700 overflow-y-auto" style="max-height: 35vh">
-                <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-300 mb-4">{{ 'SKILLS.INPUTS' | translate }}</h2>
+            <div class="flex-1 min-h-0 p-6 border-b border-base-200 overflow-y-auto">
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-4">{{ 'SKILLS.INPUTS' | translate }}</h2>
                 <div
                     cdkDropList
                     [cdkDropListData]="input_items"
@@ -48,10 +49,10 @@ interface BlockItem {
             </div>
 
             <!-- Outputs Section -->
-            <div class="p-6 border-b border-gray-700 overflow-y-auto" style="max-height: 35vh">
+            <div class="flex-1 min-h-0 p-6 overflow-y-auto">
                 <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-300">{{ 'SKILLS.OUTPUTS' | translate }}</h2>
-                    <button class="text-gray-400 hover:text-gray-300">
+                    <h2 class="text-xs font-semibold uppercase tracking-wider text-base-content/50">{{ 'SKILLS.OUTPUTS' | translate }}</h2>
+                    <button class="text-base-content/40 hover:text-base-content">
                         <icon>more_horiz</icon>
                     </button>
                 </div>
@@ -85,18 +86,18 @@ interface BlockItem {
 
             <!-- Unavailable Module Modal -->
             @if (show_unavailable_modal()) {
-                <div class="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-gray-800 border border-orange-500 rounded-lg shadow-2xl p-4 max-w-md animate-fade-in">
+                <div class="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-base-100 border border-orange-500 rounded-lg shadow-2xl p-4 max-w-md animate-fade-in">
                     <div class="flex items-start space-x-3">
                         <div class="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <icon class="text-orange-400">shield</icon>
+                            <icon class="text-orange-500">shield</icon>
                         </div>
                         <div class="flex-1">
-                            <h3 class="text-white font-semibold mb-1">Module Not Available</h3>
-                            <p class="text-sm text-gray-300 mb-2">
-                                You do not have a <span class="font-semibold text-orange-400">{{ unavailable_module() }}</span> module in your current system.
+                            <h3 class="text-base-content font-semibold mb-1">Module Not Available</h3>
+                            <p class="text-sm text-base-content/70 mb-2">
+                                You do not have a <span class="font-semibold text-orange-600">{{ unavailable_module() }}</span> module in your current system.
                             </p>
                             <button
-                                class="text-xs bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded transition-colors text-white font-medium"
+                                class="text-xs bg-secondary text-secondary-content hover:opacity-90 px-3 py-1.5 rounded transition-opacity font-medium"
                             >
                                 Add modules in Backoffice
                             </button>
@@ -107,6 +108,11 @@ interface BlockItem {
         </aside>
     `,
     styles: [`
+        :host {
+            display: flex;
+            height: 100%;
+        }
+
         @keyframes fade-in {
             from {
                 opacity: 0;
@@ -167,35 +173,6 @@ export class SkillsSidebarComponent {
         { category: 'Fire Safety', icon: 'local_fire_department', type: 'output' },
     ];
 
-    // Map block categories to driver/module name patterns
-    private readonly driver_mapping: Record<string, string[]> = {
-        'Occupancy': ['occupancy', 'sensor', 'people counter'],
-        'Power State': ['power', 'pdu', 'relay'],
-        'Booking': ['booking', 'calendar', 'exchange'],
-        'Sensor': ['sensor'],
-        'Motion': ['motion', 'camera', 'pir'],
-        'Sound Level': ['audio', 'microphone', 'sound'],
-        'Light Level': ['light', 'sensor'],
-        'Security': ['security', 'access'],
-        'Temperature': ['temperature', 'sensor', 'hvac', 'climate'],
-        'Humidity': ['humidity', 'sensor', 'climate'],
-        'HVAC': ['hvac', 'climate', 'aircon', 'ac'],
-        'Access': ['access', 'door', 'lock'],
-        'Lighting': ['lighting', 'light', 'dmx', 'dali'],
-        'Audio Visual': ['display', 'screen', 'projector', 'av'],
-        'Display Control': ['display', 'screen'],
-        'Blinds/Shades': ['blind', 'shade', 'curtain'],
-        'Notification': [], // Always available (software-only)
-        'Email Alert': [], // Always available (software-only)
-        'Time Schedule': [], // Always available (software-only)
-        'Calendar Event': ['calendar', 'booking'],
-        'Location': ['location', 'beacon'],
-        'Network Status': [], // Always available (software-only)
-        'Device Status': [], // Always available (checks other modules)
-        'Mobile App': [], // Always available (software-only)
-        'Room Functions': ['logic'], // Always available (generic)
-    };
-
     public isBlockAvailable(type: 'input' | 'output', category: string): boolean {
         const modules = this.available_modules();
 
@@ -205,7 +182,7 @@ export class SkillsSidebarComponent {
         }
 
         // Get the driver patterns for this category
-        const patterns = this.driver_mapping[category];
+        const patterns = CATEGORY_MODULE_PATTERNS[category];
 
         // If no patterns defined (software-only blocks), always available
         if (!patterns || patterns.length === 0) {
@@ -229,12 +206,12 @@ export class SkillsSidebarComponent {
 
         if (type === 'input') {
             return is_available
-                ? `${base} border-blue-500 bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 cursor-move hover:scale-105 hover:shadow-lg`
-                : `${base} border-gray-600 bg-gray-700/50 text-gray-500 cursor-not-allowed opacity-60`;
+                ? `${base} border-blue-500 bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 cursor-move hover:scale-105 hover:shadow-md`
+                : `${base} border-base-300 bg-base-200 text-base-content/40 cursor-not-allowed opacity-70`;
         } else {
             return is_available
-                ? `${base} border-green-500 bg-green-500/10 hover:bg-green-500/20 text-green-300 cursor-move hover:scale-105 hover:shadow-lg`
-                : `${base} border-gray-600 bg-gray-700/50 text-gray-500 cursor-not-allowed opacity-60`;
+                ? `${base} border-green-500 bg-green-500/10 hover:bg-green-500/20 text-green-700 cursor-move hover:scale-105 hover:shadow-md`
+                : `${base} border-base-300 bg-base-200 text-base-content/40 cursor-not-allowed opacity-70`;
         }
     }
 

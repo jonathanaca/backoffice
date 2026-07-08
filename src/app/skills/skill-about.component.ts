@@ -89,7 +89,7 @@ import { SkillsStateService } from './skills-state.service';
                         [matTooltip]="(skill_enabled() ? 'SKILLS.DISABLE' : 'SKILLS.ENABLE') | translate"
                         (click)="toggleEnabled()"
                         class="flex items-center space-x-1 rounded-lg px-2 py-1 transition-colors"
-                        [class]="skill_enabled() ? 'text-green-600 hover:bg-green-500/10' : 'text-base-content/40 hover:bg-base-200'"
+                        [class]="skill_enabled() ? 'text-success hover:bg-green-500/10' : 'text-base-content/40 hover:bg-base-200'"
                     >
                         <icon class="text-3xl">{{ skill_enabled() ? 'toggle_on' : 'toggle_off' }}</icon>
                         <span class="text-sm font-medium">{{ (skill_enabled() ? 'SKILLS.ENABLED' : 'SKILLS.DISABLED') | translate }}</span>
@@ -99,13 +99,13 @@ import { SkillsStateService } from './skills-state.service';
                     <!-- Execution Mode Toggle -->
                     <div class="flex items-center space-x-2 bg-base-200 rounded-lg p-1">
                         <button
-                            [class]="execution_mode() === 'simulate' ? 'bg-blue-600 text-white px-3 py-1 rounded text-sm font-medium' : 'text-base-content/60 px-3 py-1 rounded text-sm font-medium hover:text-base-content'"
+                            [class]="execution_mode() === 'simulate' ? 'bg-secondary text-secondary-content px-3 py-1 rounded text-sm font-medium' : 'text-base-content/60 px-3 py-1 rounded text-sm font-medium hover:text-base-content'"
                             (click)="setExecutionMode('simulate')"
                         >
                             {{ 'SKILLS.SIMULATE' | translate }}
                         </button>
                         <button
-                            [class]="execution_mode() === 'production' ? 'bg-green-600 text-white px-3 py-1 rounded text-sm font-medium' : 'text-base-content/60 px-3 py-1 rounded text-sm font-medium hover:text-base-content'"
+                            [class]="execution_mode() === 'production' ? 'bg-success text-success-content px-3 py-1 rounded text-sm font-medium' : 'text-base-content/60 px-3 py-1 rounded text-sm font-medium hover:text-base-content'"
                             (click)="setExecutionMode('production')"
                         >
                             {{ 'SKILLS.PRODUCTION' | translate }}
@@ -116,7 +116,7 @@ import { SkillsStateService } from './skills-state.service';
                     <button
                         matRipple
                         (click)="runWorkflow()"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
+                        class="bg-secondary text-secondary-content hover:opacity-90 px-4 py-2 rounded-lg text-sm font-medium transition-opacity flex items-center space-x-2"
                     >
                         <icon>play_arrow</icon>
                         <span>{{ 'SKILLS.RUN' | translate }}</span>
@@ -137,7 +137,7 @@ import { SkillsStateService } from './skills-state.service';
                         matRipple
                         [matTooltip]="'SKILLS.SAVE_WORKFLOW' | translate"
                         (click)="saveWorkflow()"
-                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
+                        class="bg-success text-success-content hover:opacity-90 px-4 py-2 rounded-lg text-sm font-medium transition-opacity flex items-center space-x-2"
                     >
                         <icon>save</icon>
                         <span>{{ 'SKILLS.SAVE' | translate }}</span>

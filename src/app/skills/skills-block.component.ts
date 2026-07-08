@@ -1,6 +1,7 @@
-import { Component, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import { CdkDrag } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { IconComponent } from '../ui/icon.component';
 import { WorkflowBlock } from './skills.types';
 import { SkillsStateService } from './skills-state.service';
@@ -11,7 +12,7 @@ import { SkillsStateService } from './skills-state.service';
         <!-- eslint-disable @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
         <div
             cdkDrag
-            [cdkDragFreeDragPosition]="getDragPosition()"
+            [cdkDragFreeDragPosition]="drag_position()"
             [cdkDragScale]="scale()"
             (cdkDragEnded)="onDragEnded($event)"
             (cdkDragStarted)="onDragStarted()"
@@ -26,7 +27,7 @@ import { SkillsStateService } from './skills-state.service';
                 (click)="onInputConnectorClick($event)"
             >
                 <div [class]="getInputConnectorClasses()">
-                    <div class="w-3 h-3 rounded-full bg-gray-800"></div>
+                    <div class="w-3 h-3 rounded-full bg-base-100"></div>
                 </div>
             </div>
 
@@ -36,7 +37,7 @@ import { SkillsStateService } from './skills-state.service';
                 (click)="onOutputConnectorClick($event)"
             >
                 <div [class]="getOutputConnectorClasses()">
-                    <div class="w-3 h-3 rounded-full bg-gray-800"></div>
+                    <div class="w-3 h-3 rounded-full bg-base-100"></div>
                 </div>
             </div>
 
@@ -60,6 +61,19 @@ import { SkillsStateService } from './skills-state.service';
                 </button>
             </div>
 
+            <!-- Source Module -->
+            @if (block().module; as mod) {
+                <div class="mt-2 flex items-center gap-1 max-w-40" [matTooltip]="'Backed by the ' + mod.name + ' module'">
+                    <icon class="!text-sm opacity-60">cable</icon>
+                    <span class="text-xs opacity-60 truncate">via {{ mod.name }}</span>
+                </div>
+            } @else if (block().module === null && (block().type === 'input' || block().type === 'output')) {
+                <div class="mt-2 flex items-center gap-1 max-w-40" matTooltip="No matching module found in this system">
+                    <icon class="!text-sm text-amber-600">link_off</icon>
+                    <span class="text-xs text-amber-600/90 truncate">no module linked</span>
+                </div>
+            }
+
             <!-- Block Settings Preview -->
             @if (block().settings && hasSettings()) {
                 <div class="mt-2 pt-2 border-t border-current/20">
@@ -81,7 +95,7 @@ import { SkillsStateService } from './skills-state.service';
             left: 0;
         }
     `],
-    imports: [CommonModule, CdkDrag, IconComponent],
+    imports: [CommonModule, CdkDrag, MatTooltipModule, IconComponent],
 })
 export class SkillsBlockComponent {
     private _state = inject(SkillsStateService);
@@ -93,7 +107,7 @@ export class SkillsBlockComponent {
     private readonly is_dragging = signal(false);
 
     public getBlockClasses(): string {
-        const base = 'absolute pointer-events-auto rounded-lg border-2 p-4 transition-shadow duration-200 min-w-[150px] shadow-lg hover:shadow-xl cursor-grab';
+        const base = 'absolute pointer-events-auto rounded-lg border-2 p-4 transition-shadow duration-200 min-w-[150px] bg-base-100 shadow-md hover:shadow-lg cursor-grab';
         const is_selected = this._state.selected_block()?.id === this.block().id;
         const is_hovered = this._state.hovered_block() === this.block().id && this._state.is_connecting();
         const is_dragging = this.is_dragging();
@@ -101,32 +115,32 @@ export class SkillsBlockComponent {
         let type_classes = '';
         switch (this.block().type) {
             case 'input':
-                type_classes = `border-blue-500 bg-blue-500/10 text-blue-300 ${
+                type_classes = `border-blue-500 bg-blue-500/10 text-blue-800 ${
                     is_selected && !is_dragging ? 'ring-2 ring-blue-400' : ''
                 } ${is_hovered ? 'ring-2 ring-yellow-400' : ''}`;
                 break;
             case 'output':
-                type_classes = `border-green-500 bg-green-500/10 text-green-300 ${
+                type_classes = `border-green-500 bg-green-500/10 text-green-800 ${
                     is_selected && !is_dragging ? 'ring-2 ring-green-400' : ''
                 } ${is_hovered ? 'ring-2 ring-yellow-400' : ''}`;
                 break;
             case 'logic':
-                type_classes = `border-purple-500 bg-purple-500/10 text-purple-300 ${
+                type_classes = `border-purple-500 bg-purple-500/10 text-purple-800 ${
                     is_selected && !is_dragging ? 'ring-2 ring-purple-400' : ''
                 } ${is_hovered ? 'ring-2 ring-yellow-400' : ''}`;
                 break;
             case 'agent':
-                type_classes = `border-red-500 bg-red-500/10 text-red-300 ${
+                type_classes = `border-red-500 bg-red-500/10 text-red-800 ${
                     is_selected && !is_dragging ? 'ring-2 ring-red-400' : ''
                 } ${is_hovered ? 'ring-2 ring-yellow-400' : ''}`;
                 break;
             case 'communication':
-                type_classes = `border-orange-500 bg-orange-500/10 text-orange-300 ${
+                type_classes = `border-orange-500 bg-orange-500/10 text-orange-800 ${
                     is_selected && !is_dragging ? 'ring-2 ring-orange-400' : ''
                 } ${is_hovered ? 'ring-2 ring-yellow-400' : ''}`;
                 break;
             default:
-                type_classes = 'border-gray-500 bg-gray-500/10 text-gray-300';
+                type_classes = 'border-base-300 bg-base-200 text-base-content/70';
         }
 
         return `${base} ${type_classes}`;
@@ -143,7 +157,7 @@ export class SkillsBlockComponent {
         } else if (has_connection) {
             return 'w-6 h-6 rounded-full border-2 border-green-400 bg-green-400 hover:bg-green-300 hover:scale-110 flex items-center justify-center transition-all duration-200 cursor-pointer';
         } else {
-            return 'w-6 h-6 rounded-full border-2 border-gray-400 bg-gray-600 hover:bg-gray-500 hover:border-gray-300 hover:scale-110 flex items-center justify-center transition-all duration-200 cursor-pointer';
+            return 'w-6 h-6 rounded-full border-2 border-base-content/30 bg-base-300 hover:bg-base-200 hover:border-base-content/50 hover:scale-110 flex items-center justify-center transition-all duration-200 cursor-pointer';
         }
     }
 
@@ -158,7 +172,7 @@ export class SkillsBlockComponent {
         } else if (has_connections) {
             return 'w-6 h-6 rounded-full border-2 border-green-400 bg-green-400 hover:bg-green-300 hover:scale-110 flex items-center justify-center transition-all duration-200 cursor-pointer';
         } else {
-            return 'w-6 h-6 rounded-full border-2 border-gray-400 bg-gray-600 hover:bg-gray-500 hover:border-gray-300 hover:scale-110 flex items-center justify-center transition-all duration-200 cursor-pointer';
+            return 'w-6 h-6 rounded-full border-2 border-base-content/30 bg-base-300 hover:bg-base-200 hover:border-base-content/50 hover:scale-110 flex items-center justify-center transition-all duration-200 cursor-pointer';
         }
     }
 
@@ -220,13 +234,16 @@ export class SkillsBlockComponent {
 
     /**
      * CDK's free drag position (with \`cdkDragScale\`) works in screen pixels,
-     * while block positions are stored in canvas-local coordinates.
+     * while block positions are stored in canvas-local coordinates. A computed
+     * keeps the object reference stable between position changes — a fresh
+     * object per change-detection cycle would make CdkDrag reset the position
+     * mid-drag.
      */
-    public getDragPosition(): { x: number; y: number } {
+    public readonly drag_position = computed(() => {
         const position = this.block().position;
         const scale = this.scale();
         return { x: position.x * scale, y: position.y * scale };
-    }
+    });
 
     public onDragEnded(event: any): void {
         this.is_dragging.set(false);
