@@ -2,12 +2,20 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatRippleModule } from '@angular/material/core';
+import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { firstValueFrom } from 'rxjs';
 import { AsyncHandler } from '../common/async-handler.class';
 import { HotkeysService } from '../common/hotkeys.service';
+import { notifyError, notifySuccess } from '../common/notifications';
+import { openConfirmModal } from '../overlays/confirm-modal.component';
 import { IconComponent } from '../ui/icon.component';
 import { SidebarMenuComponent } from '../ui/sidebar-menu.component';
 import { TranslatePipe } from '../ui/translate.pipe';
+import {
+    SkillFormModalComponent,
+    SkillFormModalData,
+} from './skill-form-modal.component';
 import { SkillsCanvasComponent } from './skills-canvas.component';
 import { SkillsSidebarComponent } from './skills-sidebar.component';
 import { SkillsSettingsPanelComponent } from './skills-settings-panel.component';
@@ -31,9 +39,12 @@ import { SkillsStateService } from './skills-state.service';
                         </button>
                         <h2 class="text-lg font-semibold text-base-content">Workflow Builder</h2>
                         @if (current_system_id()) {
-                            <div class="flex items-center space-x-2 bg-base-200 px-3 py-1 rounded-lg">
-                                <span class="text-sm text-base-content/60">System:</span>
-                                <span class="text-sm font-medium text-blue-600">{{ current_system_id() }}</span>
+                            <div
+                                class="flex items-center space-x-2 bg-base-200 px-3 py-1 rounded-lg"
+                                [matTooltip]="current_system_id()"
+                            >
+                                <icon class="text-base-content/40">meeting_room</icon>
+                                <span class="text-sm font-medium text-base-content">{{ current_system_name() || current_system_id() }}</span>
                             </div>
                         }
                     <div class="flex items-center space-x-2">
@@ -112,14 +123,14 @@ import { SkillsStateService } from './skills-state.service';
                         </button>
                     </div>
 
-                    <!-- Run Button -->
+                    <!-- Run / Deploy Button -->
                     <button
                         matRipple
                         (click)="runWorkflow()"
                         class="bg-secondary text-secondary-content hover:opacity-90 px-4 py-2 rounded-lg text-sm font-medium transition-opacity flex items-center space-x-2"
                     >
-                        <icon>play_arrow</icon>
-                        <span>{{ 'SKILLS.RUN' | translate }}</span>
+                        <icon>{{ execution_mode() === 'production' ? 'rocket_launch' : 'play_arrow' }}</icon>
+                        <span>{{ (execution_mode() === 'production' ? 'SKILLS.DEPLOY' : 'SKILLS.RUN') | translate }}</span>
                     </button>
 
                     <!-- Clear Button -->
@@ -136,11 +147,15 @@ import { SkillsStateService } from './skills-state.service';
                     <button
                         matRipple
                         [matTooltip]="'SKILLS.SAVE_WORKFLOW' | translate"
+                        [disabled]="saving()"
                         (click)="saveWorkflow()"
-                        class="bg-success text-success-content hover:opacity-90 px-4 py-2 rounded-lg text-sm font-medium transition-opacity flex items-center space-x-2"
+                        class="bg-success text-success-content hover:opacity-90 px-4 py-2 rounded-lg text-sm font-medium transition-opacity flex items-center space-x-2 disabled:opacity-50 relative"
                     >
                         <icon>save</icon>
                         <span>{{ 'SKILLS.SAVE' | translate }}</span>
+                        @if (dirty()) {
+                            <span class="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-amber-500 border-2 border-base-100"></span>
+                        }
                     </button>
                 </div>
             </div>
@@ -183,15 +198,19 @@ export class SkillAboutComponent extends AsyncHandler implements OnInit {
     private _router = inject(Router);
     private _route = inject(ActivatedRoute);
     private _hotkey = inject(HotkeysService);
+    private _dialog = inject(MatDialog);
 
     public readonly blocks = this._state.blocks;
     public readonly connections = this._state.connections;
     public readonly execution_mode = this._state.execution_mode;
     public readonly current_system_id = this._state.current_system_id;
+    public readonly current_system_name = this._state.current_system_name;
     public readonly validation_issues = this._state.validation_issues;
     public readonly skill_enabled = this._state.skill_enabled;
     public readonly can_undo = this._state.can_undo;
     public readonly can_redo = this._state.can_redo;
+    public readonly dirty = this._state.dirty;
+    public readonly saving = this._state.saving;
 
     public readonly has_errors = computed(() =>
         this.validation_issues().some((issue) => issue.level === 'error'),
@@ -203,8 +222,17 @@ export class SkillAboutComponent extends AsyncHandler implements OnInit {
             .join('\n');
     }
 
-    public showIssues(): void {
-        alert('Workflow issues:\n\n' + this.issueSummary());
+    public async showIssues(): Promise<void> {
+        const details = await openConfirmModal(
+            {
+                title: 'Workflow issues',
+                content: this.issueSummary(),
+                confirm_text: 'OK',
+                icon: { content: this.has_errors() ? 'error' : 'warning' },
+            },
+            this._dialog,
+        );
+        details.close();
     }
 
     public undo(): void {
@@ -234,7 +262,9 @@ export class SkillAboutComponent extends AsyncHandler implements OnInit {
                     id !== 'new' &&
                     this._state.current_skill()?.createdAt !== id
                 ) {
-                    this._state.loadSkillById(id);
+                    const system_id =
+                        this._route.snapshot.queryParams['system_id'];
+                    this._state.loadSkillById(id, system_id);
                 }
             }),
         );
@@ -263,8 +293,62 @@ export class SkillAboutComponent extends AsyncHandler implements OnInit {
         this._state.setExecutionMode(mode);
     }
 
-    public runWorkflow(): void {
-        this._state.simulateWorkflow();
+    public async runWorkflow(): Promise<void> {
+        if (this.execution_mode() === 'production') {
+            return this.deployWorkflow();
+        }
+        const result = this._state.simulateWorkflow();
+        const details = await openConfirmModal(
+            {
+                title: result.ok ? 'Simulation result' : 'Cannot run workflow',
+                content: result.ok
+                    ? result.summary
+                    : result.errors.map((e) => `• ${e}`).join('\n'),
+                confirm_text: 'OK',
+                icon: {
+                    content: result.ok ? 'play_arrow' : 'error',
+                },
+            },
+            this._dialog,
+        );
+        details.close();
+    }
+
+    /** Compile the skill to a PlaceTrigger and attach it to the system */
+    public async deployWorkflow(): Promise<void> {
+        if (this.dirty() || !this._state.current_skill()) {
+            notifyError('Save the skill before deploying it');
+            return;
+        }
+        const { issues } = this._state.compileToTrigger();
+        const skill = this._state.current_skill();
+        const details = await openConfirmModal(
+            {
+                title: 'Deploy skill to system',
+                content:
+                    `This will ${skill?.trigger_id ? 'update the existing' : 'create a'} trigger on ` +
+                    `"${this.current_system_name() || this.current_system_id()}" and enable it in production.` +
+                    (issues.length
+                        ? '\n\nNotes:\n' +
+                          issues.map((i) => `• ${i}`).join('\n')
+                        : ''),
+                confirm_text: 'Deploy',
+                icon: { content: 'rocket_launch' },
+            },
+            this._dialog,
+        );
+        if (details.reason !== 'done') return details.close();
+        details.loading('Deploying skill...');
+        try {
+            const updated = await this._state.deploySkill();
+            details.close();
+            notifySuccess(
+                `Skill deployed as trigger for "${updated.system_name || updated.system_id}"`,
+            );
+        } catch (e: any) {
+            details.close();
+            notifyError(e?.message || 'Failed to deploy skill');
+        }
     }
 
     public clearWorkflow(): void {
@@ -272,25 +356,34 @@ export class SkillAboutComponent extends AsyncHandler implements OnInit {
         this._state.clearCanvas();
     }
 
-    public saveWorkflow(): void {
+    public async saveWorkflow(): Promise<void> {
         const current = this._state.current_skill();
-        const name = prompt(
-            'Enter a name for this workflow:',
-            current?.name || '',
-        );
-        if (!name) return;
+        const ref = this._dialog.open<
+            SkillFormModalComponent,
+            SkillFormModalData,
+            SkillFormModalData
+        >(SkillFormModalComponent, {
+            data: {
+                name: current?.name || '',
+                description: current?.description || '',
+            },
+        });
+        const result = await firstValueFrom(ref.afterClosed());
+        if (!result?.name) return;
 
-        const description =
-            prompt(
-                'Enter a description (optional):',
-                current?.description || '',
-            ) || '';
-
-        const saved = this._state.saveSkill(name, description);
-        if (this._route.snapshot.paramMap.get('id') === 'new') {
-            this._router.navigate(['/skills', saved.createdAt], {
-                replaceUrl: true,
-            });
+        try {
+            const saved = await this._state.saveSkill(
+                result.name,
+                result.description,
+            );
+            notifySuccess(`Saved "${saved.name}"`);
+            if (this._route.snapshot.paramMap.get('id') === 'new') {
+                this._router.navigate(['/skills', saved.createdAt], {
+                    replaceUrl: true,
+                });
+            }
+        } catch (e: any) {
+            notifyError(e?.message || 'Failed to save skill');
         }
     }
 }

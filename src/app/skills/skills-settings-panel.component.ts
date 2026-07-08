@@ -1,9 +1,9 @@
-import { Component, inject, computed, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../ui/icon.component';
 import { TranslatePipe } from '../ui/translate.pipe';
-import { SkillsStateService } from './skills-state.service';
+import { ModuleFunction, SkillsStateService } from './skills-state.service';
 import { WorkflowBlock } from './skills.types';
 
 @Component({
@@ -28,34 +28,124 @@ import { WorkflowBlock } from './skills.types';
                         <span class="text-base-content/50 capitalize">({{ block.type }})</span>
                     </div>
 
-                    <!-- Source Module -->
-                    @if (block.type === 'input' || block.type === 'output') {
-                        @if (block.module; as mod) {
-                            <div class="bg-base-200 mt-3 flex items-center space-x-2 rounded-lg px-3 py-2">
-                                <icon class="text-base-content/50">cable</icon>
-                                <div class="min-w-0 flex-1">
-                                    <div class="text-base-content/50 text-[10px] font-semibold tracking-wider uppercase">
-                                        {{ 'SKILLS.SOURCE_MODULE' | translate }}
-                                    </div>
-                                    <div class="text-base-content truncate text-sm">{{ mod.name }}</div>
-                                </div>
-                            </div>
-                        } @else if (block.module === null) {
-                            <div class="bg-amber-500/10 mt-3 flex items-center space-x-2 rounded-lg px-3 py-2">
-                                <icon class="text-amber-600">link_off</icon>
-                                <div class="min-w-0 flex-1">
-                                    <div class="text-amber-600/80 text-[10px] font-semibold tracking-wider uppercase">
-                                        {{ 'SKILLS.SOURCE_MODULE' | translate }}
-                                    </div>
-                                    <div class="text-amber-700 text-sm">{{ 'SKILLS.NO_MODULE_LINKED' | translate }}</div>
-                                </div>
-                            </div>
-                        }
-                    }
                 </div>
 
                 <!-- Settings Content -->
                 <div class="flex-1 overflow-y-auto p-4">
+                    <!-- Module Binding -->
+                    @if (block.type === 'input' || block.type === 'output') {
+                        <div class="mb-6">
+                            <h3 class="text-sm font-semibold text-base-content mb-3">{{ 'SKILLS.MODULE_BINDING' | translate }}</h3>
+
+                            <div class="mb-4">
+                                <label for="binding-module" class="block text-xs font-medium text-base-content/60 mb-1">
+                                    {{ 'SKILLS.SOURCE_MODULE' | translate }}
+                                </label>
+                                <select
+                                    id="binding-module"
+                                    [value]="block.binding?.mod || ''"
+                                    (change)="setBindingModule($event, block)"
+                                    class="w-full px-3 py-2 bg-base-200 border border-base-300 rounded text-sm text-base-content focus:border-blue-500 focus:outline-none"
+                                >
+                                    <option value="">{{ 'SKILLS.NO_MODULE' | translate }}</option>
+                                    @for (mod of available_modules(); track mod.id) {
+                                        <option [value]="mod.mod">{{ mod.mod }}</option>
+                                    }
+                                </select>
+                                @if (!available_modules().length) {
+                                    <p class="text-xs text-amber-600 mt-1">{{ 'SKILLS.NO_MODULES_IN_SYSTEM' | translate }}</p>
+                                }
+                            </div>
+
+                            @if (block.binding?.mod; as mod_ref) {
+                                @if (block.type === 'input') {
+                                    <div class="mb-4">
+                                        <label for="binding-status" class="block text-xs font-medium text-base-content/60 mb-1">
+                                            {{ 'SKILLS.STATUS_VARIABLE' | translate }}
+                                        </label>
+                                        @if (statusesFor(mod_ref); as statuses) {
+                                            @if (statuses.length) {
+                                                <select
+                                                    id="binding-status"
+                                                    [value]="block.binding?.status || ''"
+                                                    (change)="setBindingField($event, block, 'status')"
+                                                    class="w-full px-3 py-2 bg-base-200 border border-base-300 rounded text-sm text-base-content focus:border-blue-500 focus:outline-none"
+                                                >
+                                                    <option value="">—</option>
+                                                    @for (status of statuses; track status) {
+                                                        <option [value]="status">{{ status }}</option>
+                                                    }
+                                                </select>
+                                            } @else {
+                                                <input
+                                                    id="binding-status"
+                                                    type="text"
+                                                    [value]="block.binding?.status || ''"
+                                                    (change)="setBindingField($event, block, 'status')"
+                                                    placeholder="presence"
+                                                    class="w-full px-3 py-2 bg-base-200 border border-base-300 rounded text-sm text-base-content focus:border-blue-500 focus:outline-none"
+                                                />
+                                                <p class="text-xs text-base-content/50 mt-1">{{ 'SKILLS.STATUS_MANUAL_HINT' | translate }}</p>
+                                            }
+                                        } @else {
+                                            <div class="text-xs text-base-content/50 py-2">{{ 'SKILLS.LOADING' | translate }}</div>
+                                        }
+                                    </div>
+                                } @else {
+                                    <div class="mb-4">
+                                        <label for="binding-method" class="block text-xs font-medium text-base-content/60 mb-1">
+                                            {{ 'SKILLS.FUNCTION' | translate }}
+                                        </label>
+                                        @if (functionsFor(mod_ref); as functions) {
+                                            @if (functions.length) {
+                                                <select
+                                                    id="binding-method"
+                                                    [value]="block.binding?.method || ''"
+                                                    (change)="setBindingField($event, block, 'method')"
+                                                    class="w-full px-3 py-2 bg-base-200 border border-base-300 rounded text-sm text-base-content focus:border-blue-500 focus:outline-none"
+                                                >
+                                                    <option value="">—</option>
+                                                    @for (fn of functions; track fn.name) {
+                                                        <option [value]="fn.name">{{ fn.name }}({{ fn.params.join(', ') }})</option>
+                                                    }
+                                                </select>
+                                            } @else {
+                                                <input
+                                                    id="binding-method"
+                                                    type="text"
+                                                    [value]="block.binding?.method || ''"
+                                                    (change)="setBindingField($event, block, 'method')"
+                                                    placeholder="power"
+                                                    class="w-full px-3 py-2 bg-base-200 border border-base-300 rounded text-sm text-base-content focus:border-blue-500 focus:outline-none"
+                                                />
+                                                <p class="text-xs text-base-content/50 mt-1">{{ 'SKILLS.FUNCTION_MANUAL_HINT' | translate }}</p>
+                                            }
+                                        } @else {
+                                            <div class="text-xs text-base-content/50 py-2">{{ 'SKILLS.LOADING' | translate }}</div>
+                                        }
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label for="binding-args" class="block text-xs font-medium text-base-content/60 mb-1">
+                                            {{ 'SKILLS.FUNCTION_ARGS' | translate }}
+                                        </label>
+                                        <textarea
+                                            id="binding-args"
+                                            rows="2"
+                                            [value]="argsJson(block)"
+                                            (change)="setBindingArgs($event, block)"
+                                            placeholder='{ "state": true }'
+                                            class="w-full px-3 py-2 bg-base-200 border border-base-300 rounded font-mono text-xs text-base-content focus:border-blue-500 focus:outline-none resize-none"
+                                        ></textarea>
+                                        @if (args_error()) {
+                                            <p class="text-xs text-red-600 mt-1">{{ args_error() }}</p>
+                                        }
+                                    </div>
+                                }
+                            }
+                        </div>
+                    }
+
                     <!-- Common Settings -->
                     <div class="mb-6">
                         <h3 class="text-sm font-semibold text-base-content mb-3">{{ 'SKILLS.COMMON_SETTINGS' | translate }}</h3>
@@ -285,9 +375,99 @@ export class SkillsSettingsPanelComponent {
     private _state = inject(SkillsStateService);
 
     public readonly selected_block = this._state.selected_block;
+    public readonly available_modules = this._state.available_modules;
+    public readonly args_error = signal('');
+
+    constructor() {
+        // Load the binding options whenever the selection points at a module
+        effect(() => {
+            const block = this.selected_block();
+            const mod = block?.binding?.mod;
+            if (!mod) return;
+            if (block.type === 'input') this._state.loadModuleStatuses(mod);
+            if (block.type === 'output') this._state.loadModuleFunctions(mod);
+        });
+    }
 
     public closePanel(): void {
         this._state.selectBlock(null);
+    }
+
+    /** Status variables for a module, undefined while loading */
+    public statusesFor(mod: string): string[] | undefined {
+        return this._state.module_statuses()[mod];
+    }
+
+    /** Functions for a module, undefined while loading */
+    public functionsFor(mod: string): ModuleFunction[] | undefined {
+        return this._state.module_functions()[mod];
+    }
+
+    public setBindingModule(event: Event, block: WorkflowBlock): void {
+        const mod = (event.target as HTMLSelectElement).value;
+        const module = this.available_modules().find((m) => m.mod === mod);
+        const binding = module
+            ? {
+                  module_id: module.id,
+                  mod: module.mod,
+                  module_name: module.custom_name || module.name,
+              }
+            : null;
+        this._updateBinding(block, binding);
+        if (module) {
+            if (block.type === 'input') {
+                this._state.loadModuleStatuses(module.mod);
+            } else {
+                this._state.loadModuleFunctions(module.mod);
+            }
+        }
+    }
+
+    public setBindingField(
+        event: Event,
+        block: WorkflowBlock,
+        field: 'status' | 'method',
+    ): void {
+        const value = (
+            event.target as HTMLSelectElement | HTMLInputElement
+        ).value.trim();
+        const binding = block.binding;
+        if (!binding) return;
+        this._updateBinding(block, { ...binding, [field]: value });
+    }
+
+    public setBindingArgs(event: Event, block: WorkflowBlock): void {
+        const raw = (event.target as HTMLTextAreaElement).value.trim();
+        const binding = block.binding;
+        if (!binding) return;
+        if (!raw) {
+            this.args_error.set('');
+            this._updateBinding(block, { ...binding, args: {} });
+            return;
+        }
+        try {
+            const args = JSON.parse(raw);
+            if (typeof args !== 'object' || Array.isArray(args)) {
+                throw new Error('Arguments must be a JSON object');
+            }
+            this.args_error.set('');
+            this._updateBinding(block, { ...binding, args });
+        } catch {
+            this.args_error.set('Invalid JSON — arguments were not saved');
+        }
+    }
+
+    public argsJson(block: WorkflowBlock): string {
+        const args = block.binding?.args;
+        return args && Object.keys(args).length ? JSON.stringify(args) : '';
+    }
+
+    private _updateBinding(
+        block: WorkflowBlock,
+        binding: WorkflowBlock['binding'],
+    ): void {
+        this._state.updateBlock(block.id, { binding });
+        this._state.selectBlock({ ...block, binding });
     }
 
     public getBlockIcon(category: string): string {

@@ -1,10 +1,11 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { MatRippleModule } from '@angular/material/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AsyncHandler } from '../common/async-handler.class';
 import { ActiveItemService } from '../common/item.service';
 import { IconComponent } from '../ui/icon.component';
 import { SkillData } from '../skills/skills.types';
+import { SkillsPersistenceService } from '../skills/skills-persistence.service';
 import { SkillsStateService } from '../skills/skills-state.service';
 
 @Component({
@@ -114,13 +115,10 @@ export class SystemSkillsComponent extends AsyncHandler implements OnInit {
     private _router = inject(Router);
     private _service = inject(ActiveItemService);
     private _skills = inject(SkillsStateService);
+    private _persistence = inject(SkillsPersistenceService);
 
     public readonly system_id = signal<string>('');
-    public readonly all_skills = signal<SkillData[]>([]);
-    public readonly skills = computed(() => {
-        const sys_id = this.system_id();
-        return this.all_skills().filter((s) => s.system_id === sys_id);
-    });
+    public readonly skills = signal<SkillData[]>([]);
 
     public ngOnInit(): void {
         this.subscription(
@@ -134,15 +132,14 @@ export class SystemSkillsComponent extends AsyncHandler implements OnInit {
         );
     }
 
-    private loadSkills(): void {
-        const saved_skills = localStorage.getItem('BACKOFFICE.SKILLS');
-        if (saved_skills) {
-            try {
-                this.all_skills.set(JSON.parse(saved_skills));
-            } catch (e) {
-                console.error('Failed to load skills', e);
-                this.all_skills.set([]);
-            }
+    private async loadSkills(): Promise<void> {
+        try {
+            this.skills.set(
+                await this._persistence.loadSystemSkills(this.system_id()),
+            );
+        } catch (e) {
+            console.error('Failed to load skills', e);
+            this.skills.set([]);
         }
     }
 
@@ -151,6 +148,7 @@ export class SystemSkillsComponent extends AsyncHandler implements OnInit {
         if (!sys_id) return;
 
         this._skills.clearWorkflow();
+        this._skills.setSystemId(sys_id, this._service.active_item?.name);
         this._router.navigate(['/skills', 'new'], {
             queryParams: { system_id: sys_id },
         });

@@ -61,13 +61,18 @@ import { SkillsStateService } from './skills-state.service';
                 </button>
             </div>
 
-            <!-- Source Module -->
-            @if (block().module; as mod) {
-                <div class="mt-2 flex items-center gap-1 max-w-40" [matTooltip]="'Backed by the ' + mod.name + ' module'">
+            <!-- Source Module Binding -->
+            @if (block().binding; as binding) {
+                <div class="mt-2 flex items-center gap-1 max-w-40" [matTooltip]="'Backed by the ' + binding.module_name + ' module'">
                     <icon class="!text-sm opacity-60">cable</icon>
-                    <span class="text-xs opacity-60 truncate">via {{ mod.name }}</span>
+                    <span class="text-xs opacity-60 truncate">via {{ binding.module_name }}</span>
                 </div>
-            } @else if (block().module === null && (block().type === 'input' || block().type === 'output')) {
+                @if (getBindingDetail(); as detail) {
+                    <div class="mt-0.5 max-w-40 truncate font-mono text-[10px] opacity-50">
+                        {{ detail }}
+                    </div>
+                }
+            } @else if (block().binding === null && (block().type === 'input' || block().type === 'output')) {
                 <div class="mt-2 flex items-center gap-1 max-w-40" matTooltip="No matching module found in this system">
                     <icon class="!text-sm text-amber-600">link_off</icon>
                     <span class="text-xs text-amber-600/90 truncate">no module linked</span>
@@ -213,6 +218,19 @@ export class SkillsBlockComponent {
             'Communication': 'chat',
         };
         return icon_map[this.block().category] || 'settings';
+    }
+
+    /** Technical detail of the binding, e.g. \`Occupancy_1.presence\` */
+    public getBindingDetail(): string {
+        const binding = this.block().binding;
+        if (!binding?.mod) return '';
+        if (this.block().type === 'input' && binding.status) {
+            return `${binding.mod}.${binding.status}`;
+        }
+        if (this.block().type === 'output' && binding.method) {
+            return `${binding.mod}.${binding.method}()`;
+        }
+        return '';
     }
 
     public hasSettings(): boolean {

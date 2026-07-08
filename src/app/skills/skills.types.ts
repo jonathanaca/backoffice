@@ -1,6 +1,17 @@
-export interface BlockModuleRef {
-    id: string;
-    name: string;
+/** Link between a block and a real module in the skill's system */
+export interface BlockBinding {
+    /** Database ID of the module */
+    module_id: string;
+    /** Module reference used by triggers/execute, e.g. \`Occupancy_1\` */
+    mod: string;
+    /** Human-friendly module name for display */
+    module_name: string;
+    /** Status variable watched by input blocks, e.g. \`presence\` */
+    status?: string;
+    /** Function executed by output blocks, e.g. \`power\` */
+    method?: string;
+    /** Arguments passed to the function */
+    args?: Record<string, any>;
 }
 
 export interface WorkflowBlock {
@@ -11,7 +22,7 @@ export interface WorkflowBlock {
     settings?: Record<string, any>;
     comments?: string;
     /** The system module this block reads from / acts on */
-    module?: BlockModuleRef | null;
+    binding?: BlockBinding | null;
 }
 
 /**
@@ -60,6 +71,10 @@ export interface PlaceOSModule {
     name: string;
     custom_name?: string;
     driver_id?: string;
+    /** Module reference within the system, e.g. \`Occupancy_1\` */
+    mod: string;
+    /** Display name for pickers */
+    display_name: string;
 }
 
 export type ExecutionMode = 'simulate' | 'production';
@@ -75,7 +90,12 @@ export interface SkillData {
     blocks: WorkflowBlock[];
     connections: Connection[];
     system_id: string;
+    system_name?: string;
     enabled?: boolean;
+    /** ID of the PlaceTrigger this skill was compiled to, if deployed */
+    trigger_id?: string | null;
+    /** Whether the trigger has been attached to the system as an instance */
+    trigger_attached?: boolean;
     createdAt: string;
     updatedAt?: string;
 }

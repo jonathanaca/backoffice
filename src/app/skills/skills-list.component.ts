@@ -6,10 +6,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { querySystems, PlaceSystem } from '@placeos/ts-client';
+import { MatDialog } from '@angular/material/dialog';
 import { AsyncHandler } from '../common/async-handler.class';
+import { notifyError, notifySuccess } from '../common/notifications';
+import { openConfirmModal } from '../overlays/confirm-modal.component';
 import { IconComponent } from '../ui/icon.component';
 import { SidebarMenuComponent } from '../ui/sidebar-menu.component';
 import { SkillData } from './skills.types';
+import { SkillsPersistenceService } from './skills-persistence.service';
 import { SkillsStateService } from './skills-state.service';
 
 @Component({
@@ -99,9 +103,36 @@ import { SkillsStateService } from './skills-state.service';
                                             >{{ skill.connections?.length || 0 }}
                                             connections</span
                                         >
+                                        @if (skill.trigger_id) {
+                                            <span class="text-green-600 flex items-center gap-0.5 !opacity-100">
+                                                <icon class="!text-sm">rocket_launch</icon>
+                                                Deployed
+                                            </span>
+                                        }
                                     </div>
-                                    <div class="text-base-content mt-2 text-xs opacity-30">
-                                        Created {{ formatDate(skill.createdAt) }}
+                                    <div class="mt-2 flex items-end justify-between">
+                                        <div class="text-base-content text-xs opacity-30">
+                                            @if (skill.system_name) {
+                                                {{ skill.system_name }} ·
+                                            }
+                                            {{ formatDate(skill.createdAt) }}
+                                        </div>
+                                        <div class="flex items-center space-x-1 opacity-0 transition-opacity group-hover:opacity-100">
+                                            <button
+                                                matTooltip="Duplicate skill"
+                                                (click)="duplicateSkill($event, skill)"
+                                                class="text-base-content/50 hover:text-base-content p-1 transition-colors"
+                                            >
+                                                <icon>content_copy</icon>
+                                            </button>
+                                            <button
+                                                matTooltip="Delete skill"
+                                                (click)="deleteSkill($event, skill)"
+                                                class="text-base-content/50 hover:text-red-600 p-1 transition-colors"
+                                            >
+                                                <icon>delete</icon>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             }
@@ -234,21 +265,25 @@ export class SkillsListComponent extends AsyncHandler implements OnInit {
 
     private _router = inject(Router);
     private _skills_state = inject(SkillsStateService);
+    private _persistence = inject(SkillsPersistenceService);
+    private _dialog = inject(MatDialog);
+
+    public readonly loading = signal(false);
 
     public ngOnInit(): void {
         this.loadSkills();
         this.loadSystems();
     }
 
-    private loadSkills(): void {
-        const saved_skills = localStorage.getItem('BACKOFFICE.SKILLS');
-        if (saved_skills) {
-            try {
-                this.skills.set(JSON.parse(saved_skills));
-            } catch (e) {
-                console.error('Failed to load skills', e);
-                this.skills.set([]);
-            }
+    private async loadSkills(): Promise<void> {
+        this.loading.set(true);
+        try {
+            this.skills.set(await this._persistence.loadAllSkills());
+        } catch (e) {
+            console.error('Failed to load skills', e);
+            this.skills.set([]);
+        } finally {
+            this.loading.set(false);
         }
     }
 
@@ -275,13 +310,11 @@ export class SkillsListComponent extends AsyncHandler implements OnInit {
 
     public confirmSystemSelection(): void {
         const system_id = this.selected_system_id();
-        if (!system_id) {
-            alert('Please select a system before continuing');
-            return;
-        }
+        if (!system_id) return;
 
+        const system = this.systems().find((s) => s.id === system_id);
         this._skills_state.clearWorkflow();
-        this._skills_state.setSystemId(system_id);
+        this._skills_state.setSystemId(system_id, system?.name);
         this._skills_state.loadSystemModules(system_id);
         this.show_system_selector.set(false);
         this._router.navigate(['/skills', 'new']);
@@ -292,14 +325,58 @@ export class SkillsListComponent extends AsyncHandler implements OnInit {
         this._router.navigate(['/skills', skill.createdAt]);
     }
 
-    public toggleSkillEnabled(event: MouseEvent, skill: SkillData): void {
+    public async toggleSkillEnabled(
+        event: MouseEvent,
+        skill: SkillData,
+    ): Promise<void> {
         event.stopPropagation();
         const updated = { ...skill, enabled: !(skill.enabled ?? true) };
-        const list = this.skills().map((s) =>
-            s.createdAt === skill.createdAt ? updated : s,
+        this.skills.update((list) =>
+            list.map((s) => (s.createdAt === skill.createdAt ? updated : s)),
         );
-        this.skills.set(list);
-        localStorage.setItem('BACKOFFICE.SKILLS', JSON.stringify(list));
+        await this._persistence.saveSkill(updated);
+    }
+
+    public async deleteSkill(
+        event: MouseEvent,
+        skill: SkillData,
+    ): Promise<void> {
+        event.stopPropagation();
+        const details = await openConfirmModal(
+            {
+                title: 'Delete skill',
+                content: `Delete the skill "${skill.name}"? This does not remove any trigger it was deployed to.`,
+                confirm_text: 'Delete',
+                icon: { content: 'delete' },
+            },
+            this._dialog,
+        );
+        if (details.reason !== 'done') return details.close();
+        details.loading('Deleting skill...');
+        try {
+            await this._persistence.deleteSkill(skill);
+            this.skills.update((list) =>
+                list.filter((s) => s.createdAt !== skill.createdAt),
+            );
+            notifySuccess(`Deleted "${skill.name}"`);
+        } catch (e) {
+            notifyError('Failed to delete skill');
+        }
+        details.close();
+    }
+
+    public async duplicateSkill(
+        event: MouseEvent,
+        skill: SkillData,
+    ): Promise<void> {
+        event.stopPropagation();
+        try {
+            const copy = await this._persistence.duplicateSkill(skill);
+            this.skills.update((list) => [...list, copy]);
+            notifySuccess(`Created "${copy.name}"`);
+        } catch (e) {
+            notifyError('Failed to duplicate skill');
+        }
     }
 
     public formatDate(iso_string: string): string {

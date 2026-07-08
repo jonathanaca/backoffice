@@ -1006,6 +1006,19 @@
         "RESET_ZOOM": "Reset zoom to 100%",
         "FIT_VIEW": "Fit workflow to view",
         "SOURCE_MODULE": "Source module",
-        "NO_MODULE_LINKED": "No matching module in this system"
+        "NO_MODULE_LINKED": "No matching module in this system",
+        "DEPLOY": "Deploy",
+        "NAME": "Name",
+        "NAME_PLACEHOLDER": "e.g. Lights on when occupied",
+        "DESCRIPTION": "Description",
+        "MODULE_BINDING": "Module Binding",
+        "NO_MODULE": "— No module —",
+        "NO_MODULES_IN_SYSTEM": "No modules found in this system",
+        "STATUS_VARIABLE": "Status variable",
+        "STATUS_MANUAL_HINT": "Could not list status variables — enter one manually",
+        "FUNCTION": "Function",
+        "FUNCTION_MANUAL_HINT": "Could not list functions — enter one manually",
+        "FUNCTION_ARGS": "Arguments (JSON object)",
+        "LOADING": "Loading..."
     }
 }
