@@ -12,6 +12,7 @@ import { notifyError, notifySuccess } from '../common/notifications';
 import { openConfirmModal } from '../overlays/confirm-modal.component';
 import { IconComponent } from '../ui/icon.component';
 import { SidebarMenuComponent } from '../ui/sidebar-menu.component';
+import { DEMO_SYSTEM_ID, DEMO_SYSTEM_NAME } from './demo-system';
 import { SkillData } from './skills.types';
 import { SkillsPersistenceService } from './skills-persistence.service';
 import { SkillsStateService } from './skills-state.service';
@@ -166,6 +167,35 @@ import { SkillsStateService } from './skills-state.service';
 
                         <!-- Modal Content -->
                         <div class="flex-1 overflow-y-auto p-6">
+                            <!-- Demo System (always available, pinned above search results) -->
+                            <div
+                                class="border rounded-lg p-3 mb-4 cursor-pointer transition-all border-dashed"
+                                [class.border-purple-500]="selected_system_id() === DEMO_SYSTEM_ID"
+                                [class.bg-purple-500/10]="selected_system_id() === DEMO_SYSTEM_ID"
+                                [class.border-base-300]="selected_system_id() !== DEMO_SYSTEM_ID"
+                                [class.hover:bg-base-200]="selected_system_id() !== DEMO_SYSTEM_ID"
+                                (click)="selected_system_id.set(DEMO_SYSTEM_ID)"
+                            >
+                                <div class="flex items-center space-x-3">
+                                    <div
+                                        class="w-4 h-4 rounded-full border-2 flex items-center justify-center"
+                                        [class.border-purple-500]="selected_system_id() === DEMO_SYSTEM_ID"
+                                        [class.border-base-300]="selected_system_id() !== DEMO_SYSTEM_ID"
+                                    >
+                                        @if (selected_system_id() === DEMO_SYSTEM_ID) {
+                                            <div class="w-2 h-2 rounded-full bg-purple-500"></div>
+                                        }
+                                    </div>
+                                    <icon class="text-purple-500">auto_awesome</icon>
+                                    <div class="flex-1">
+                                        <div class="text-base-content font-medium">Demo System</div>
+                                        <div class="text-xs text-base-content/60">
+                                            Every block type active with sample modules — for demos and exploring
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             @if (loading_systems()) {
                                 <div class="flex items-center justify-center py-12">
                                     <div class="text-base-content/60">Loading systems...</div>
@@ -269,6 +299,7 @@ export class SkillsListComponent extends AsyncHandler implements OnInit {
     private _dialog = inject(MatDialog);
 
     public readonly loading = signal(false);
+    public readonly DEMO_SYSTEM_ID = DEMO_SYSTEM_ID;
 
     public ngOnInit(): void {
         this.loadSkills();
@@ -314,7 +345,10 @@ export class SkillsListComponent extends AsyncHandler implements OnInit {
 
         const system = this.systems().find((s) => s.id === system_id);
         this._skills_state.clearWorkflow();
-        this._skills_state.setSystemId(system_id, system?.name);
+        this._skills_state.setSystemId(
+            system_id,
+            system_id === DEMO_SYSTEM_ID ? DEMO_SYSTEM_NAME : system?.name,
+        );
         this._skills_state.loadSystemModules(system_id);
         this.show_system_selector.set(false);
         this._router.navigate(['/skills', 'new']);

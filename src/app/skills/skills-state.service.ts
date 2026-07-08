@@ -14,6 +14,13 @@ import {
 } from '@placeos/ts-client';
 import { firstValueFrom } from 'rxjs';
 import { calculateModuleIndex } from '../common/api';
+import {
+    DEMO_MODULE_FUNCTIONS,
+    DEMO_MODULE_STATUSES,
+    DEMO_SYSTEM_ID,
+    DEMO_SYSTEM_NAME,
+    demoModules,
+} from './demo-system';
 import { SkillsPersistenceService } from './skills-persistence.service';
 import {
     BlockBinding,
@@ -105,6 +112,11 @@ export class SkillsStateService {
     }
 
     public async loadSystemModules(system_id: string): Promise<void> {
+        if (system_id === DEMO_SYSTEM_ID) {
+            this.available_modules.set(demoModules());
+            this._backfillBlockBindings();
+            return;
+        }
         try {
             const modules_response = await firstValueFrom(
                 queryModules({ control_system_id: system_id, limit: 500 }),
@@ -142,6 +154,13 @@ export class SkillsStateService {
         if (cached) return cached;
         const system_id = this.current_system_id();
         if (!system_id) return [];
+        if (system_id === DEMO_SYSTEM_ID) {
+            this.module_statuses.update((map) => ({
+                ...map,
+                [mod]: DEMO_MODULE_STATUSES,
+            }));
+            return DEMO_MODULE_STATUSES;
+        }
         const { module_class, index } = this._splitModuleRef(mod);
         let statuses: string[] = [];
         try {
@@ -162,6 +181,13 @@ export class SkillsStateService {
         if (cached) return cached;
         const system_id = this.current_system_id();
         if (!system_id) return [];
+        if (system_id === DEMO_SYSTEM_ID) {
+            this.module_functions.update((map) => ({
+                ...map,
+                [mod]: DEMO_MODULE_FUNCTIONS,
+            }));
+            return DEMO_MODULE_FUNCTIONS;
+        }
         const { module_class, index } = this._splitModuleRef(mod);
         let functions: ModuleFunction[] = [];
         try {
@@ -258,7 +284,9 @@ export class SkillsStateService {
             this.module_functions.set({});
         }
         this.current_system_id.set(system_id);
-        if (system_name) {
+        if (system_id === DEMO_SYSTEM_ID) {
+            this.current_system_name.set(DEMO_SYSTEM_NAME);
+        } else if (system_name) {
             this.current_system_name.set(system_name);
         } else if (system_id && (changed || !this.current_system_name())) {
             this.current_system_name.set('');
@@ -774,6 +802,11 @@ export class SkillsStateService {
         const system_id = this.current_system_id();
         if (!skill || !system_id) {
             throw new Error('Save the skill before deploying it');
+        }
+        if (system_id === DEMO_SYSTEM_ID) {
+            throw new Error(
+                'The demo system is for exploring blocks only — skills built on it cannot be deployed',
+            );
         }
         if (this.dirty()) {
             throw new Error('Save your changes before deploying');
