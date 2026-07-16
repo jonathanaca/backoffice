@@ -55,6 +55,13 @@ export const ROUTES: Routes = [
                         (m) => m.SettingsHistoryViewComponent,
                     ),
             },
+            {
+                path: 'reports',
+                loadComponent: () =>
+                    import('./zone-reports.component').then(
+                        (m) => m.ZoneReportsComponent,
+                    ),
+            },
             { path: '**', redirectTo: 'about' },
         ],
     },

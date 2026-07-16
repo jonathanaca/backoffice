@@ -72,5 +72,19 @@ export const appRoutes: Route[] = [
         loadChildren: () =>
             import('./admin/admin.routes').then((m) => m.ROUTES),
     },
+    {
+        path: 'reports',
+        canActivate: [AuthorisedUserGuard],
+        loadChildren: () =>
+            import('./reports/reports.routes').then((m) => m.REPORTS_ROUTES),
+    },
+    {
+        path: 'maintenance',
+        canActivate: [AuthorisedUserGuard],
+        loadComponent: () =>
+            import('./maintenance/predictive-maintenance.component').then(
+                (m) => m.PredictiveMaintenanceComponent,
+            ),
+    },
     { path: '**', redirectTo: 'systems' },
 ];

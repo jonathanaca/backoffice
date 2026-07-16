@@ -184,6 +184,11 @@ export class ZonesComponent extends AsyncHandler implements OnInit {
                     name: i18n('ZONES.TAB_SETTINGS_HISTORY'),
                     icon: { content: 'schedule' },
                 },
+                {
+                    id: 'reports',
+                    name: i18n('ZONES.TAB_REPORTS'),
+                    icon: { content: 'analytics' },
+                },
             ].concat(this.extensions),
         );
     }

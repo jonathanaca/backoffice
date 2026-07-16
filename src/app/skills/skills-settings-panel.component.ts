@@ -49,7 +49,7 @@ import { WorkflowBlock } from './skills.types';
                                 >
                                     <option value="">{{ 'SKILLS.NO_MODULE' | translate }}</option>
                                     @for (mod of available_modules(); track mod.id) {
-                                        <option [value]="mod.mod">{{ mod.mod }}</option>
+                                        <option [value]="mod.mod" [selected]="mod.mod === block.binding?.mod">{{ mod.mod }}</option>
                                     }
                                 </select>
                                 @if (!available_modules().length) {
@@ -73,7 +73,7 @@ import { WorkflowBlock } from './skills.types';
                                                 >
                                                     <option value="">—</option>
                                                     @for (status of statuses; track status) {
-                                                        <option [value]="status">{{ status }}</option>
+                                                        <option [value]="status" [selected]="status === block.binding?.status">{{ status }}</option>
                                                     }
                                                 </select>
                                             } @else {
@@ -106,7 +106,7 @@ import { WorkflowBlock } from './skills.types';
                                                 >
                                                     <option value="">—</option>
                                                     @for (fn of functions; track fn.name) {
-                                                        <option [value]="fn.name">{{ fn.name }}({{ fn.params.join(', ') }})</option>
+                                                        <option [value]="fn.name" [selected]="fn.name === block.binding?.method">{{ fn.name }}({{ fn.params.join(', ') }})</option>
                                                     }
                                                 </select>
                                             } @else {

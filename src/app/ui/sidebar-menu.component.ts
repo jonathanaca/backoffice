@@ -268,6 +268,16 @@ export class SidebarMenuComponent extends AsyncHandler implements OnInit {
             name: 'COMMON.SECTION_MONITOR',
             links: [
                 {
+                    name: 'COMMON.REPORTS',
+                    route: '/reports',
+                    icon: 'analytics',
+                },
+                {
+                    name: 'COMMON.PREDICTIVE_MAINTENANCE',
+                    route: '/maintenance',
+                    icon: 'engineering',
+                },
+                {
                     name: 'COMMON.ALERTS',
                     icon: 'notifications_active',
                     show_on: () => !!this.alerts_url,

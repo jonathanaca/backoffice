@@ -182,6 +182,11 @@ export class SystemsComponent extends AsyncHandler implements OnInit {
                     name: i18n('SYSTEMS.TAB_SETTINGS_HISTORY'),
                     icon: { content: 'schedule' },
                 },
+                {
+                    id: 'reports',
+                    name: i18n('SYSTEMS.TAB_REPORTS'),
+                    icon: { content: 'analytics' },
+                },
             ].concat(this.extensions()),
         );
     }

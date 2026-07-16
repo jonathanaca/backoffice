@@ -207,7 +207,9 @@
         "SECTION_OPERATE": "Operate",
         "SECTION_AUTOMATE": "Automate",
         "SECTION_MONITOR": "Monitor",
-        "SECTION_MANAGE": "Manage"
+        "SECTION_MANAGE": "Manage",
+        "REPORTS": "Reports",
+        "PREDICTIVE_MAINTENANCE": "Predictive Maintenance"
     },
     "SYSTEMS": {
         "SINGULAR": "System",
@@ -247,6 +249,7 @@
         "TAB_TRIGGERS": "Triggers",
         "TAB_METADATA": "Metadata",
         "TAB_SETTINGS_HISTORY": "Settings History",
+        "TAB_REPORTS": "Reports",
         "FIND_MODULE": "Find existing module...",
         "MODULE_LIST": "Module List",
         "MODULE_FIELD_STATE": "State",
@@ -367,6 +370,7 @@
         "TAB_METADATA": "Metadata",
         "TAB_CHILDREN": "Children",
         "TAB_SETTINGS_HISTORY": "Settings History",
+        "TAB_REPORTS": "Reports",
         "TAG_WARNING": "Tags set in this zone require a parent zone to work correctly.",
         "SELECT_SYSTEM": "Select system",
         "PARENT_ID": "Parent ID",
@@ -1020,5 +1024,25 @@
         "FUNCTION_MANUAL_HINT": "Could not list functions — enter one manually",
         "FUNCTION_ARGS": "Arguments (JSON object)",
         "LOADING": "Loading..."
+    },
+    "REPORTS": {
+        "TITLE": "Reports",
+        "ZONE": "Zone",
+        "SELECT_ZONE": "Select a zone...",
+        "ORGANISATIONS": "Organisations",
+        "BUILDINGS": "Buildings",
+        "LEVELS": "Levels",
+        "OTHER": "Other zones",
+        "NO_ZONE_SELECTED": "No zone selected",
+        "SELECT_ZONE_PROMPT": "Choose a zone above to view its analytics and benchmarking reports.",
+        "AI_ANALYTICS": "AI Analytics",
+        "BENCHMARKING": "Benchmarking",
+        "SAMPLE_DATA": "Sample data",
+        "SAMPLE_DATA_HINT": "These reports currently show generated sample data for demonstration"
+    },
+    "MAINTENANCE": {
+        "TITLE": "Predictive Maintenance",
+        "SAMPLE_DATA": "Sample data",
+        "SAMPLE_DATA_HINT": "This page currently shows generated sample data for demonstration"
     }
 }

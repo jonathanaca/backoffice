@@ -69,6 +69,13 @@ export const ROUTES: Routes = [
                         (m) => m.SettingsHistoryViewComponent,
                     ),
             },
+            {
+                path: 'reports',
+                loadComponent: () =>
+                    import('./system-reports.component').then(
+                        (m) => m.SystemReportsComponent,
+                    ),
+            },
             { path: '**', redirectTo: 'about' },
         ],
     },
