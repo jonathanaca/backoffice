@@ -30,6 +30,7 @@ import {
     PlaceOSModule,
     SkillData,
     ValidationIssue,
+    WORKPLACE_EVENTS_CATEGORY,
     WorkflowBlock,
 } from './skills.types';
 
@@ -261,14 +262,19 @@ export class SkillsStateService {
             this.categoryNeedsModule(b.category);
         if (!this.blocks().some(resolvable)) return;
         this.blocks.update((blocks) =>
-            blocks.map((b) =>
-                resolvable(b)
-                    ? {
-                          ...b,
-                          binding: this.resolveModuleForCategory(b.category),
-                      }
-                    : b,
-            ),
+            blocks.map((b) => {
+                if (!resolvable(b)) return b;
+                let binding = this.resolveModuleForCategory(b.category);
+                // Carry an already-selected workplace event onto the binding
+                if (
+                    binding &&
+                    b.category === WORKPLACE_EVENTS_CATEGORY &&
+                    b.settings?.['event']
+                ) {
+                    binding = { ...binding, status: b.settings['event'] };
+                }
+                return { ...b, binding };
+            }),
         );
     }
 
@@ -627,6 +633,16 @@ export class SkillsStateService {
         }
 
         for (const input of inputs) {
+            if (
+                input.category === WORKPLACE_EVENTS_CATEGORY &&
+                !input.settings?.['event']
+            ) {
+                issues.push({
+                    level: 'warning',
+                    message: `"${input.category}" has no event selected`,
+                });
+                continue;
+            }
             if (!input.binding?.mod || !input.binding.status) {
                 issues.push({
                     level: 'warning',
@@ -739,6 +755,19 @@ export class SkillsStateService {
                 issues.push(
                     `"${input.category}" is not bound to a module status variable`,
                 );
+                continue;
+            }
+            if (input.category === WORKPLACE_EVENTS_CATEGORY) {
+                // Event flags compare against true rather than a threshold
+                comparisons.push({
+                    left: {
+                        mod: binding.mod,
+                        status: binding.status,
+                        keys: [],
+                    },
+                    operator: TriggerConditionOperator.EQ,
+                    right: true,
+                });
                 continue;
             }
             const operator =
@@ -876,6 +905,35 @@ export class SkillsStateService {
             inputs.find((b) =>
                 b.category.toLowerCase().includes('occupancy'),
             ) || inputs[0];
+
+        // Workplace events dry-run: the event fires, connected outputs run
+        if (occ.category === WORKPLACE_EVENTS_CATEGORY) {
+            const label = occ.settings?.['event_label'] || 'Workplace event';
+            const source = occ.binding?.mod
+                ? ` (${occ.binding.mod}.${occ.binding.status || '—'})`
+                : '';
+            const event_targets = connections_array
+                .filter((c) => c.from === occ.id)
+                .map((c) => blocks_array.find((b) => b.id === c.to))
+                .filter(
+                    (b): b is WorkflowBlock => !!b && b.type === 'output',
+                );
+            const run_list = event_targets.length ? event_targets : outputs;
+            const describe_target = (block: WorkflowBlock) =>
+                block.binding?.mod && block.binding.method
+                    ? `${block.category} → ${block.binding.mod}.${block.binding.method}()`
+                    : block.category;
+            return {
+                ok: true,
+                errors: [],
+                summary: [
+                    `Event: ${label}${source}`,
+                    'Simulated: event fired → TRUE',
+                    `Would run: ${run_list.map(describe_target).join(', ')}`,
+                ].join('\n'),
+            };
+        }
+
         const threshold = Number(occ.settings?.threshold ?? 1);
         const condition = String(occ.settings?.condition ?? 'greater_than');
         const simulated_count = Number(

@@ -138,6 +138,7 @@ export class SkillsSidebarComponent {
     public readonly available_modules = this._state.available_modules;
 
     public readonly input_items: BlockItem[] = [
+        { category: 'Workplace Events', icon: 'event_note', type: 'input' },
         { category: 'Occupancy', icon: 'group', type: 'input' },
         { category: 'Power State', icon: 'power_settings_new', type: 'input' },
         { category: 'Booking', icon: 'book', type: 'input' },

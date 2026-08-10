@@ -4,7 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../ui/icon.component';
 import { TranslatePipe } from '../ui/translate.pipe';
 import { ModuleFunction, SkillsStateService } from './skills-state.service';
-import { WorkflowBlock } from './skills.types';
+import {
+    WORKPLACE_EVENTS,
+    WORKPLACE_EVENTS_CATEGORY,
+    WorkflowBlock,
+} from './skills.types';
 
 @Component({
     selector: 'skills-settings-panel',
@@ -58,7 +62,10 @@ import { WorkflowBlock } from './skills.types';
                             </div>
 
                             @if (block.binding?.mod; as mod_ref) {
-                                @if (block.type === 'input') {
+                                @if (
+                                    block.type === 'input' &&
+                                    !isWorkplaceEvents(block)
+                                ) {
                                     <div class="mb-4">
                                         <label for="binding-status" class="block text-xs font-medium text-base-content/60 mb-1">
                                             {{ 'SKILLS.STATUS_VARIABLE' | translate }}
@@ -91,7 +98,7 @@ import { WorkflowBlock } from './skills.types';
                                             <div class="text-xs text-base-content/50 py-2">{{ 'SKILLS.LOADING' | translate }}</div>
                                         }
                                     </div>
-                                } @else {
+                                } @else if (block.type === 'output') {
                                     <div class="mb-4">
                                         <label for="binding-method" class="block text-xs font-medium text-base-content/60 mb-1">
                                             {{ 'SKILLS.FUNCTION' | translate }}
@@ -186,6 +193,44 @@ import { WorkflowBlock } from './skills.types';
 
                         @switch (block.type) {
                             @case ('input') {
+                                @if (isWorkplaceEvents(block)) {
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label for="workplace-event" class="block text-xs font-medium text-base-content/60 mb-1">
+                                                {{ 'SKILLS.EVENT' | translate }}
+                                            </label>
+                                            <select
+                                                id="workplace-event"
+                                                [value]="block.settings?.['event'] || ''"
+                                                (change)="setWorkplaceEvent($event, block)"
+                                                class="w-full px-3 py-2 bg-base-200 border border-base-300 rounded text-sm text-base-content focus:border-blue-500 focus:outline-none"
+                                            >
+                                                <option value="">{{ 'SKILLS.SELECT_EVENT' | translate }}</option>
+                                                @for (group of workplace_events; track group.group) {
+                                                    <optgroup [label]="group.group">
+                                                        @for (event of group.events; track event.key) {
+                                                            <option
+                                                                [value]="event.key"
+                                                                [selected]="event.key === block.settings?.['event']"
+                                                            >
+                                                                {{ event.label }}
+                                                            </option>
+                                                        }
+                                                    </optgroup>
+                                                }
+                                            </select>
+                                            @if (selectedEventDescription(block); as description) {
+                                                <p class="text-xs text-base-content/50 mt-1">{{ description }}</p>
+                                            }
+                                        </div>
+                                        <div class="flex items-start gap-2 rounded-lg bg-blue-500/10 px-3 py-2.5">
+                                            <icon class="mt-0.5 !text-base text-blue-700">info</icon>
+                                            <p class="text-xs text-blue-900/80">
+                                                {{ 'SKILLS.EVENT_HINT' | translate }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                } @else {
                                 <div class="space-y-4">
                                     <!-- Threshold -->
                                     <div>
@@ -233,6 +278,7 @@ import { WorkflowBlock } from './skills.types';
                                         <p class="text-xs text-base-content/50 mt-1">For testing purposes</p>
                                     </div>
                                 </div>
+                                }
                             }
                             @case ('output') {
                                 <div class="space-y-4">
@@ -377,6 +423,45 @@ export class SkillsSettingsPanelComponent {
     public readonly selected_block = this._state.selected_block;
     public readonly available_modules = this._state.available_modules;
     public readonly args_error = signal('');
+    public readonly workplace_events = WORKPLACE_EVENTS;
+
+    public isWorkplaceEvents(block: WorkflowBlock): boolean {
+        return block.category === WORKPLACE_EVENTS_CATEGORY;
+    }
+
+    public selectedEventDescription(block: WorkflowBlock): string {
+        const key = block.settings?.['event'];
+        if (!key) return '';
+        for (const group of WORKPLACE_EVENTS) {
+            const event = group.events.find((e) => e.key === key);
+            if (event) return event.description;
+        }
+        return '';
+    }
+
+    /**
+     * Selecting an event stores it in the block settings and mirrors the
+     * event key onto the binding's status, so compilation to triggers works
+     * exactly like any other input block.
+     */
+    public setWorkplaceEvent(event: Event, block: WorkflowBlock): void {
+        const key = (event.target as HTMLSelectElement).value;
+        let label = '';
+        for (const group of WORKPLACE_EVENTS) {
+            const found = group.events.find((e) => e.key === key);
+            if (found) label = found.label;
+        }
+        const settings = {
+            ...block.settings,
+            event: key,
+            event_label: label,
+        };
+        const binding = block.binding
+            ? { ...block.binding, status: key }
+            : block.binding;
+        this._state.updateBlock(block.id, { settings, binding });
+        this._state.selectBlock({ ...block, settings, binding });
+    }
 
     constructor() {
         // Load the binding options whenever the selection points at a module
@@ -472,6 +557,7 @@ export class SkillsSettingsPanelComponent {
 
     public getBlockIcon(category: string): string {
         const icon_map: Record<string, string> = {
+            'Workplace Events': 'event_note',
             'Occupancy': 'group',
             'Power State': 'power_settings_new',
             'Booking': 'book',

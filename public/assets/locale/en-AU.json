@@ -600,7 +600,10 @@
         "STATUS_MANUAL_HINT": "Could not list status variables — enter one manually",
         "FUNCTION": "Function",
         "FUNCTION_MANUAL_HINT": "Could not list functions — enter one manually",
-        "FUNCTION_ARGS": "Arguments (JSON object)"
+        "FUNCTION_ARGS": "Arguments (JSON object)",
+        "EVENT": "Event",
+        "SELECT_EVENT": "Select an event...",
+        "EVENT_HINT": "These are the same trigger points the template email system uses — a skill lets the event trigger any action instead."
     },
     "TRIGGER": {
         "EDIT": "Edit trigger"

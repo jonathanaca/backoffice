@@ -61,6 +61,16 @@ import { SkillsStateService } from './skills-state.service';
                 </button>
             </div>
 
+            <!-- Selected Workplace Event -->
+            @if (block().settings?.['event_label']; as event_label) {
+                <div class="mt-1.5 flex max-w-40 items-center gap-1">
+                    <icon class="!text-sm opacity-60">bolt</icon>
+                    <span class="truncate text-xs font-medium"
+                        >on {{ event_label }}</span
+                    >
+                </div>
+            }
+
             <!-- Source Module Binding -->
             @if (block().binding; as binding) {
                 <div class="mt-2 flex items-center gap-1 max-w-40" [matTooltip]="'Backed by the ' + binding.module_name + ' module'">
@@ -183,6 +193,7 @@ export class SkillsBlockComponent {
 
     public getBlockIcon(): string {
         const icon_map: Record<string, string> = {
+            'Workplace Events': 'event_note',
             'Occupancy': 'group',
             'Power State': 'power_settings_new',
             'Booking': 'book',
@@ -242,6 +253,7 @@ export class SkillsBlockComponent {
         const settings = this.block().settings;
         if (!settings) return [];
         return Object.entries(settings)
+            .filter(([key]) => key !== 'event' && key !== 'event_label')
             .slice(0, 2)
             .map(([key, value]) => ({ key, value: String(value) }));
     }
